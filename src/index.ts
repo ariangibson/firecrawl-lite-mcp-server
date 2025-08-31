@@ -22,682 +22,100 @@ import { randomUUID } from 'node:crypto';
 
 dotenv.config();
 
-// Tool definitions
+// Lightweight tool definitions for essential Firecrawl functionality
 const SCRAPE_TOOL: Tool = {
-  name: 'firecrawl_scrape',
-  description: `
-Scrape content from a single URL with advanced options. 
-This is the most powerful, fastest and most reliable scraper tool, if available you should always default to using this tool for any web scraping needs.
-
-**Best for:** Single page content extraction, when you know exactly which page contains the information.
-**Not recommended for:** Multiple pages (use batch_scrape), unknown page (use search), structured data (use extract).
-**Common mistakes:** Using scrape for a list of URLs (use batch_scrape instead). If batch scrape doesnt work, just use scrape and call it multiple times.
-**Prompt Example:** "Get the content of the page at https://example.com."
-**Usage Example:**
-\`\`\`json
-{
-  "name": "firecrawl_scrape",
-  "arguments": {
-    "url": "https://example.com",
-    "formats": ["markdown"],
-    "maxAge": 172800000
-  }
-}
-\`\`\`
-**Performance:** Add maxAge parameter for 500% faster scrapes using cached data.
-**Returns:** Markdown, HTML, or other formats as specified.
-`,
+  name: 'scrape_page',
+  description: 'Extract content from a single webpage',
   inputSchema: {
     type: 'object',
     properties: {
-      url: {
-        type: 'string',
-        description: 'The URL to scrape',
-      },
-      formats: {
-        type: 'array',
-        items: {
-          oneOf: [
-            {
-              type: 'string',
-              enum: [
-                'markdown',
-                'html',
-                'rawHtml',
-                'screenshot',
-                'links',
-                'extract',
-                'summary',
-                'changeTracking',
-              ],
-            },
-            {
-              type: 'object',
-              properties: {
-                type: {
-                  type: 'string',
-                  enum: ['json'],
-                },
-                prompt: {
-                  type: 'string',
-                  description: 'Prompt to guide JSON extraction',
-                },
-                schema: {
-                  type: 'object',
-                  description: 'JSON schema for structured extraction',
-                },
-              },
-              required: ['type'],
-              additionalProperties: true,
-              description:
-                'Advanced format option. Use { type: "json", prompt, schema } to request structured JSON extraction.',
-            },
-          ],
-        },
-        default: ['markdown'],
-        description: "Content formats to extract (default: ['markdown'])",
-      },
+      url: { type: 'string', description: 'Webpage URL to scrape' },
       onlyMainContent: {
         type: 'boolean',
-        default: true,
-        description:
-          'Extract only the main content, filtering out navigation, footers, etc.',
-      },
-      includeTags: {
-        type: 'array',
-        items: { type: 'string' },
-        description: 'HTML tags to specifically include in extraction',
-      },
-      excludeTags: {
-        type: 'array',
-        items: { type: 'string' },
-        description: 'HTML tags to exclude from extraction',
-      },
-      waitFor: {
-        type: 'number',
-        description: 'Time in milliseconds to wait for dynamic content to load',
-      },
-      actions: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            type: {
-              type: 'string',
-              enum: [
-                'wait',
-                'click',
-                'screenshot',
-                'write',
-                'press',
-                'scroll',
-                'scrape',
-                'executeJavascript',
-              ],
-              description: 'Type of action to perform',
-            },
-            selector: {
-              type: 'string',
-              description: 'CSS selector for the target element',
-            },
-            milliseconds: {
-              type: 'number',
-              description: 'Time to wait in milliseconds (for wait action)',
-            },
-            text: {
-              type: 'string',
-              description: 'Text to write (for write action)',
-            },
-            key: {
-              type: 'string',
-              description: 'Key to press (for press action)',
-            },
-            direction: {
-              type: 'string',
-              enum: ['up', 'down'],
-              description: 'Scroll direction',
-            },
-            script: {
-              type: 'string',
-              description: 'JavaScript code to execute',
-            },
-            fullPage: {
-              type: 'boolean',
-              description: 'Take full page screenshot',
-            },
-          },
-          required: ['type'],
-        },
-        description: 'List of actions to perform before scraping',
-      },
-      mobile: {
-        type: 'boolean',
-        description: 'Use mobile viewport',
-      },
-      skipTlsVerification: {
-        type: 'boolean',
-        description: 'Skip TLS certificate verification',
-      },
-      removeBase64Images: {
-        type: 'boolean',
-        description: 'Remove base64 encoded images from output',
-      },
-      location: {
-        type: 'object',
-        properties: {
-          country: {
-            type: 'string',
-            description: 'Country code for geolocation',
-          },
-          languages: {
-            type: 'array',
-            items: { type: 'string' },
-            description: 'Language codes for content',
-          },
-        },
-        description: 'Location settings for scraping',
-      },
-      storeInCache: {
-        type: 'boolean',
-        default: true,
-        description:
-          'If true, the page will be stored in the Firecrawl index and cache. Setting this to false is useful if your scraping activity may have data protection concerns.',
-      },
-      maxAge: {
-        type: 'number',
-        default: 172800000,
-        description:
-          'Maximum age in milliseconds for cached content. Use cached data if available and younger than maxAge, otherwise scrape fresh. Enables 500% faster scrapes for recently cached pages. Default: 172800000',
+        description: 'Extract only main content',
+        default: true
       },
     },
     required: ['url'],
   },
 };
 
-const MAP_TOOL: Tool = {
-  name: 'firecrawl_map',
-  description: `
-Map a website to discover all indexed URLs on the site.
-
-**Best for:** Discovering URLs on a website before deciding what to scrape; finding specific sections of a website.
-**Not recommended for:** When you already know which specific URL you need (use scrape or batch_scrape); when you need the content of the pages (use scrape after mapping).
-**Common mistakes:** Using crawl to discover URLs instead of map.
-**Prompt Example:** "List all URLs on example.com."
-**Usage Example:**
-\`\`\`json
-{
-  "name": "firecrawl_map",
-  "arguments": {
-    "url": "https://example.com"
-  }
-}
-\`\`\`
-**Returns:** Array of URLs found on the site.
-`,
-  inputSchema: {
-    type: 'object',
-    properties: {
-      url: {
-        type: 'string',
-        description: 'Starting URL for URL discovery',
-      },
-      search: {
-        type: 'string',
-        description: 'Optional search term to filter URLs',
-      },
-      sitemap: {
-        type: 'string',
-        enum: ['include', 'skip', 'only'],
-        description:
-          'Sitemap handling: "include" - use sitemap + find other pages (default), "skip" - ignore sitemap completely, "only" - only return sitemap URLs',
-      },
-
-      includeSubdomains: {
-        type: 'boolean',
-        description: 'Include URLs from subdomains in results',
-      },
-
-      limit: {
-        type: 'number',
-        description: 'Maximum number of URLs to return',
-      },
-      ignoreQueryParameters: {
-        type: 'boolean',
-        default: true,
-        description: 'Do not return URLs with query parameters',
-      },
-    },
-    required: ['url'],
-  },
-};
-
-const CRAWL_TOOL: Tool = {
-  name: 'firecrawl_crawl',
-  description: `
- Starts a crawl job on a website and extracts content from all pages.
- 
- **Best for:** Extracting content from multiple related pages, when you need comprehensive coverage.
- **Not recommended for:** Extracting content from a single page (use scrape); when token limits are a concern (use map + batch_scrape); when you need fast results (crawling can be slow).
- **Warning:** Crawl responses can be very large and may exceed token limits. Limit the crawl depth and number of pages, or use map + batch_scrape for better control.
- **Common mistakes:** Setting limit or maxDiscoveryDepth too high (causes token overflow) or too low (causes missing pages); using crawl for a single page (use scrape instead). Using a /* wildcard is not recommended.
- **Prompt Example:** "Get all blog posts from the first two levels of example.com/blog."
- **Usage Example:**
- \`\`\`json
- {
-   "name": "firecrawl_crawl",
-   "arguments": {
-     "url": "https://example.com/blog/*",
-     "maxDiscoveryDepth": 5,
-     "limit": 20,
-     "allowExternalLinks": false,
-     "deduplicateSimilarURLs": true,
-     "sitemap": "include"
-   }
- }
- \`\`\`
- **Returns:** Operation ID for status checking; use firecrawl_check_crawl_status to check progress.
- `,
-  inputSchema: {
-    type: 'object',
-    properties: {
-      url: {
-        type: 'string',
-        description: 'Starting URL for the crawl',
-      },
-      prompt: {
-        type: 'string',
-        description:
-          'Natural language prompt to generate crawler options. Explicitly set parameters will override generated ones.',
-      },
-      excludePaths: {
-        type: 'array',
-        items: { type: 'string' },
-        description: 'URL paths to exclude from crawling',
-      },
-      includePaths: {
-        type: 'array',
-        items: { type: 'string' },
-        description: 'Only crawl these URL paths',
-      },
-      maxDiscoveryDepth: {
-        type: 'number',
-        description:
-          'Maximum discovery depth to crawl. The root site and sitemapped pages have depth 0.',
-      },
-      sitemap: {
-        type: 'string',
-        enum: ['skip', 'include', 'only'],
-        default: 'include',
-        description:
-          "Sitemap mode when crawling. 'skip' ignores the sitemap entirely, 'include' uses sitemap plus other discovery methods (default), 'only' restricts crawling to sitemap URLs.",
-      },
-      limit: {
-        type: 'number',
-        default: 10000,
-        description: 'Maximum number of pages to crawl (default: 10000)',
-      },
-      allowExternalLinks: {
-        type: 'boolean',
-        description: 'Allow crawling links to external domains',
-      },
-      allowSubdomains: {
-        type: 'boolean',
-        default: false,
-        description: 'Allow crawling links to subdomains of the main domain',
-      },
-      crawlEntireDomain: {
-        type: 'boolean',
-        default: false,
-        description:
-          'When true, follow internal links to sibling or parent URLs, not just child paths',
-      },
-      delay: {
-        type: 'number',
-        description:
-          'Delay in seconds between scrapes to respect site rate limits',
-      },
-      maxConcurrency: {
-        type: 'number',
-        description:
-          'Maximum number of concurrent scrapes; if unset, team limit is used',
-      },
-      webhook: {
-        oneOf: [
-          {
-            type: 'string',
-            description: 'Webhook URL to notify when crawl is complete',
-          },
-          {
-            type: 'object',
-            properties: {
-              url: {
-                type: 'string',
-                description: 'Webhook URL',
-              },
-              headers: {
-                type: 'object',
-                description: 'Custom headers for webhook requests',
-              },
-            },
-            required: ['url'],
-          },
-        ],
-      },
-      deduplicateSimilarURLs: {
-        type: 'boolean',
-        description: 'Remove similar URLs during crawl',
-      },
-      ignoreQueryParameters: {
-        type: 'boolean',
-        default: false,
-        description:
-          'Do not re-scrape the same path with different (or none) query parameters',
-      },
-      scrapeOptions: {
-        type: 'object',
-        properties: {
-          formats: {
-            type: 'array',
-            items: {
-              oneOf: [
-                {
-                  type: 'string',
-                  enum: [
-                    'markdown',
-                    'html',
-                    'rawHtml',
-                    'screenshot',
-                    'links',
-                    'extract',
-                    'summary',
-                  ],
-                },
-                {
-                  type: 'object',
-                  properties: {
-                    type: {
-                      type: 'string',
-                      enum: ['json'],
-                    },
-                    prompt: {
-                      type: 'string',
-                      description: 'Prompt to guide JSON extraction',
-                    },
-                    schema: {
-                      type: 'object',
-                      description: 'JSON schema for structured extraction',
-                    },
-                  },
-                  required: ['type'],
-                  additionalProperties: true,
-                  description:
-                    'Advanced format option. Use { type: "json", prompt, schema } to request structured JSON extraction.',
-                },
-              ],
-            },
-            default: ['markdown'],
-            description: "Content formats to extract (default: ['markdown'])",
-          },
-          onlyMainContent: {
-            type: 'boolean',
-          },
-          includeTags: {
-            type: 'array',
-            items: { type: 'string' },
-          },
-          excludeTags: {
-            type: 'array',
-            items: { type: 'string' },
-          },
-          waitFor: {
-            type: 'number',
-          },
-        },
-        description: 'Options for scraping each page',
-      },
-    },
-    required: ['url'],
-  },
-};
-
-const CHECK_CRAWL_STATUS_TOOL: Tool = {
-  name: 'firecrawl_check_crawl_status',
-  description: `
-Check the status of a crawl job.
-
-**Usage Example:**
-\`\`\`json
-{
-  "name": "firecrawl_check_crawl_status",
-  "arguments": {
-    "id": "550e8400-e29b-41d4-a716-446655440000"
-  }
-}
-\`\`\`
-**Returns:** Status and progress of the crawl job, including results if available.
-`,
-  inputSchema: {
-    type: 'object',
-    properties: {
-      id: {
-        type: 'string',
-        description: 'Crawl job ID to check',
-      },
-    },
-    required: ['id'],
-  },
-};
-
-const SEARCH_TOOL: Tool = {
-  name: 'firecrawl_search',
-  description: `
-Search the web and optionally extract content from search results. This is the most powerful web search tool available, and if available you should always default to using this tool for any web search needs.
-
-**Best for:** Finding specific information across multiple websites, when you don't know which website has the information; when you need the most relevant content for a query.
-**Not recommended for:** When you need to search the filesystem. When you already know which website to scrape (use scrape); when you need comprehensive coverage of a single website (use map or crawl.
-**Common mistakes:** Using crawl or map for open-ended questions (use search instead).
-**Prompt Example:** "Find the latest research papers on AI published in 2023."
-**Sources:** web, images, news, default to web unless needed images or news.
-**Usage Example:**
-\`\`\`json
-{
-  "name": "firecrawl_search",
-  "arguments": {
-    "query": "latest AI research papers 2023",
-    "limit": 5,
-    "lang": "en",
-    "country": "us",
-    "sources": [
-      "web",
-      "images",
-      "news"
-    ],
-    "scrapeOptions": {
-      "formats": ["markdown"],
-      "onlyMainContent": true
-    }
-  }
-}
-\`\`\`
-**Returns:** Array of search results (with optional scraped content).
-`,
-  inputSchema: {
-    type: 'object',
-    properties: {
-      query: {
-        type: 'string',
-        description: 'Search query string',
-      },
-      limit: {
-        type: 'number',
-        description: 'Maximum number of results to return (default: 5)',
-      },
-      tbs: {
-        type: 'string',
-        description: 'Time-based search filter',
-      },
-      filter: {
-        type: 'string',
-        description: 'Search filter',
-      },
-      location: {
-        type: 'string',
-        description: 'Location parameter for search results',
-      },
-      sources: {
-        type: 'array',
-        description:
-          'Sources to search. Determines which result arrays are included in the response.',
-        items: {
-          oneOf: [
-            {
-              type: 'object',
-              properties: {
-                type: { type: 'string', enum: ['web'] },
-                // tbs: {
-                //   type: 'string',
-                //   description:
-                //     'Time-based search parameter (e.g., qdr:h, qdr:d, qdr:w, qdr:m, qdr:y or custom cdr with cd_min/cd_max)',
-                // },
-                // location: {
-                //   type: 'string',
-                //   description: 'Location parameter for search results',
-                // },
-              },
-              required: ['type'],
-              additionalProperties: false,
-            },
-            {
-              type: 'object',
-              properties: {
-                type: { type: 'string', enum: ['images'] },
-              },
-              required: ['type'],
-              additionalProperties: false,
-            },
-            {
-              type: 'object',
-              properties: {
-                type: { type: 'string', enum: ['news'] },
-              },
-              required: ['type'],
-              additionalProperties: false,
-            },
-          ],
-        },
-      },
-      scrapeOptions: {
-        type: 'object',
-        properties: {
-          formats: {
-            type: 'array',
-            items: {
-              oneOf: [
-                {
-                  type: 'string',
-                  enum: ['markdown', 'html', 'rawHtml'],
-                },
-                {
-                  type: 'object',
-                  properties: {
-                    type: { type: 'string', enum: ['json'] },
-                    prompt: { type: 'string' },
-                    schema: { type: 'object' },
-                  },
-                  required: ['type'],
-                  additionalProperties: true,
-                },
-              ],
-            },
-            description: 'Content formats to extract from search results',
-          },
-          onlyMainContent: {
-            type: 'boolean',
-            description: 'Extract only the main content from results',
-          },
-          waitFor: {
-            type: 'number',
-            description: 'Time in milliseconds to wait for dynamic content',
-          },
-        },
-        description: 'Options for scraping search results',
-      },
-    },
-    required: ['query'],
-  },
-};
-
-const EXTRACT_TOOL: Tool = {
-  name: 'firecrawl_extract',
-  description: `
-Extract structured information from web pages using LLM capabilities. Supports both cloud AI and self-hosted LLM extraction.
-
-**Best for:** Extracting specific structured data like prices, names, details from web pages.
-**Not recommended for:** When you need the full content of a page (use scrape); when you're not looking for specific structured data.
-**Arguments:**
-- urls: Array of URLs to extract information from
-- prompt: Custom prompt for the LLM extraction
-- schema: JSON schema for structured data extraction
-- allowExternalLinks: Allow extraction from external links
-- enableWebSearch: Enable web search for additional context
-- includeSubdomains: Include subdomains in extraction
-**Prompt Example:** "Extract the product name, price, and description from these product pages."
-**Usage Example:**
-\`\`\`json
-{
-  "name": "firecrawl_extract",
-  "arguments": {
-    "urls": ["https://example.com/page1", "https://example.com/page2"],
-    "prompt": "Extract product information including name, price, and description",
-    "schema": {
-      "type": "object",
-      "properties": {
-        "name": { "type": "string" },
-        "price": { "type": "number" },
-        "description": { "type": "string" }
-      },
-      "required": ["name", "price"]
-    },
-    "allowExternalLinks": false,
-    "enableWebSearch": false,
-    "includeSubdomains": false
-  }
-}
-\`\`\`
-**Returns:** Extracted structured data as defined by your schema.
-`,
+const BATCH_SCRAPE_TOOL: Tool = {
+  name: 'batch_scrape',
+  description: 'Scrape multiple URLs in a single request',
   inputSchema: {
     type: 'object',
     properties: {
       urls: {
         type: 'array',
         items: { type: 'string' },
-        description: 'List of URLs to extract information from',
+        description: 'Array of URLs to scrape'
       },
-      prompt: {
-        type: 'string',
-        description: 'Prompt for the LLM extraction',
-      },
-      schema: {
-        type: 'object',
-        description: 'JSON schema for structured data extraction',
-      },
-      allowExternalLinks: {
+      onlyMainContent: {
         type: 'boolean',
-        description: 'Allow extraction from external links',
-      },
-      enableWebSearch: {
-        type: 'boolean',
-        description: 'Enable web search for additional context',
-      },
-      includeSubdomains: {
-        type: 'boolean',
-        description: 'Include subdomains in extraction',
+        description: 'Extract only main content',
+        default: true
       },
     },
     required: ['urls'],
   },
 };
+
+const EXTRACT_DATA_TOOL: Tool = {
+  name: 'extract_data',
+  description: 'Extract structured data from webpages using LLM',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      urls: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'URLs to extract data from'
+      },
+      prompt: {
+        type: 'string',
+        description: 'Instructions for what data to extract'
+      },
+      enableWebSearch: {
+        type: 'boolean',
+        description: 'Enable web search for additional context',
+        default: false
+      },
+    },
+    required: ['urls', 'prompt'],
+  },
+};
+
+const EXTRACT_WITH_SCHEMA_TOOL: Tool = {
+  name: 'extract_with_schema',
+  description: 'Extract structured data using a JSON schema',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      urls: { 
+        type: 'array', 
+        items: { type: 'string' },
+        description: 'URLs to extract data from'
+      },
+      schema: { 
+        type: 'object', 
+        description: 'JSON schema defining the data structure to extract'
+      },
+      prompt: { 
+        type: 'string', 
+        description: 'Optional instructions for extraction'
+      },
+      enableWebSearch: { 
+        type: 'boolean', 
+        description: 'Enable web search for additional context',
+        default: false
+      },
+    },
+    required: ['urls', 'schema'],
+  },
+};
+
+// Remove all complex tools - keep only essential ones above
 
 // /**
 //  * Parameters for LLMs.txt generation operations.
@@ -888,8 +306,8 @@ function removeEmptyTopLevel<T extends Record<string, any>>(
 // Server implementation
 const server = new Server(
   {
-    name: 'firecrawl-mcp',
-    version: '1.7.0',
+    name: 'firecrawl-lite-mcp-server',
+    version: '1.0.0',
   },
   {
     capabilities: {
@@ -909,6 +327,10 @@ if (process.env.CLOUD_SERVICE !== 'true' && !FIRECRAWL_API_KEY) {
 }
 
 // Initialize Firecrawl client with optional API URL
+const client = new FirecrawlApp({
+  apiKey: FIRECRAWL_API_KEY || 'dummy', // Dummy key for local instance
+  ...(FIRECRAWL_API_URL ? { apiUrl: FIRECRAWL_API_URL } : {}),
+});
 
 // Configuration for retries and monitoring
 const CONFIG = {
@@ -996,11 +418,9 @@ server.setRequestHandler(
     return {
       tools: [
         SCRAPE_TOOL,
-        MAP_TOOL,
-        CRAWL_TOOL,
-        CHECK_CRAWL_STATUS_TOOL,
-        SEARCH_TOOL,
-        EXTRACT_TOOL,
+        BATCH_SCRAPE_TOOL,
+        EXTRACT_DATA_TOOL,
+        EXTRACT_WITH_SCHEMA_TOOL,
       ],
     };
   }
@@ -1035,315 +455,88 @@ server.setRequestHandler(
       }
 
       switch (name) {
-        case 'firecrawl_scrape': {
+        case 'scrape_page': {
           if (!isScrapeOptions(args)) {
-            throw new Error('Invalid arguments for firecrawl_scrape');
+            throw new Error('Invalid arguments for scrape_page');
           }
-          const { url, ...options } = args as any;
-          const cleaned = removeEmptyTopLevel(options);
-          try {
-            const scrapeStartTime = Date.now();
-            safeLog(
-              'info',
-              `Starting scrape for URL: ${url} with options: ${JSON.stringify(options)}`
-            );
-            const response = await client.scrape(url, {
-              ...cleaned,
-              origin: 'mcp-server',
-            } as any);
-            // Log performance metrics
-            safeLog(
-              'info',
-              `Scrape completed in ${Date.now() - scrapeStartTime}ms`
-            );
-
-            // Format content based on requested formats
-            const contentParts: string[] = [];
-
-            const formats = (options?.formats ?? []) as any[];
-            const hasFormat = (name: string) =>
-              Array.isArray(formats) &&
-              formats.some((f) =>
-                typeof f === 'string'
-                  ? f === name
-                  : f && typeof f === 'object' && (f as any).type === name
-              );
-
-            if (hasFormat('markdown') && (response as any).markdown) {
-              contentParts.push((response as any).markdown);
-            }
-            if (hasFormat('html') && (response as any).html) {
-              contentParts.push((response as any).html);
-            }
-            if (hasFormat('rawHtml') && (response as any).rawHtml) {
-              contentParts.push((response as any).rawHtml);
-            }
-            if (hasFormat('links') && (response as any).links) {
-              contentParts.push((response as any).links.join('\n'));
-            }
-            if (hasFormat('screenshot') && (response as any).screenshot) {
-              contentParts.push((response as any).screenshot);
-            }
-            if (hasFormat('json') && (response as any).json) {
-              contentParts.push(
-                JSON.stringify((response as any).json, null, 2)
-              );
-            }
-            if (
-              hasFormat('changeTracking') &&
-              (response as any).changeTracking
-            ) {
-              contentParts.push(
-                JSON.stringify((response as any).changeTracking, null, 2)
-              );
-            }
-            if (hasFormat('summary') && (response as any).summary) {
-              contentParts.push(
-                JSON.stringify((response as any).summary, null, 2)
-              );
-            }
-
-            // If options.formats is empty, default to markdown
-            if (!options.formats || options.formats.length === 0) {
-              options.formats = ['markdown'];
-            }
-
-            // Add warning to response if present
-            if ((response as any).warning) {
-              safeLog('warning', (response as any).warning);
-            }
-
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: trimResponseText(
-                    contentParts.join('\n\n') || 'No content available'
-                  ),
-                },
-              ],
-              isError: false,
-            };
-          } catch (error) {
-            const errorMessage =
-              error instanceof Error ? error.message : String(error);
-            return {
-              content: [{ type: 'text', text: trimResponseText(errorMessage) }],
-              isError: true,
-            };
-          }
+          const options: ScrapeOptions = {
+            formats: ['markdown'],
+            onlyMainContent: args.onlyMainContent !== false,
+          };
+          const response = await client.scrape(args.url, options);
+          return {
+            content: [{ type: 'text', text: response.markdown || response.html || 'No content found' }],
+            isError: false,
+          };
         }
 
-        case 'firecrawl_map': {
-          if (!isMapOptions(args)) {
-            throw new Error('Invalid arguments for firecrawl_map');
+        case 'batch_scrape': {
+          if (!Array.isArray(args.urls) || args.urls.length === 0) {
+            throw new Error('Invalid arguments for batch_scrape: urls array required');
           }
-          const { url, ...options } = args;
-          const response = await client.map(url, {
-            ...options,
-            // @ts-expect-error Extended API options including origin
-            origin: 'mcp-server',
+          const options: ScrapeOptions = {
+            formats: ['markdown'],
+            onlyMainContent: args.onlyMainContent !== false,
+          };
+          const results = [];
+          for (const url of args.urls) {
+            try {
+              const response = await client.scrape(url, options);
+              results.push({
+                url,
+                success: true,
+                content: response.markdown || response.html || 'No content found'
+              });
+            } catch (error) {
+              results.push({
+                url,
+                success: false,
+                error: error instanceof Error ? error.message : String(error)
+              });
+            }
+            // Add small delay to prevent overwhelming the API
+            await delay(200);
+          }
+          return {
+            content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
+            isError: false,
+          };
+        }
+
+        case 'extract_data': {
+          if (!Array.isArray(args.urls) || args.urls.length === 0 || !args.prompt) {
+            throw new Error('Invalid arguments for extract_data: urls array and prompt required');
+          }
+          const response = await client.extract({
+            urls: args.urls,
+            prompt: args.prompt as string,
+            enableWebSearch: args.enableWebSearch as boolean || false,
           });
-
-          if (!response.links) {
-            throw new Error('No links received from Firecrawl API');
-          }
           return {
-            content: [
-              {
-                type: 'text',
-                text: trimResponseText(JSON.stringify(response.links, null, 2)),
-              },
-            ],
+            content: [{ type: 'text', text: JSON.stringify(response, null, 2) }],
             isError: false,
           };
         }
 
-        case 'firecrawl_crawl': {
-          if (!isCrawlOptions(args)) {
-            throw new Error('Invalid arguments for firecrawl_crawl');
+        case 'extract_with_schema': {
+          if (!Array.isArray(args.urls) || args.urls.length === 0 || !args.schema) {
+            throw new Error('Invalid arguments for extract_with_schema: urls array and schema required');
           }
-          const { url, ...options } = args;
-          const response = await withRetry(
-            async () =>
-              client.crawl(url as string, {
-                ...options,
-                // @ts-expect-error Extended API options including origin
-                origin: 'mcp-server',
-              }),
-            'crawl operation'
-          );
-
+          const response = await client.extract({
+            urls: args.urls,
+            schema: args.schema as Record<string, unknown>,
+            prompt: args.prompt as string,
+            enableWebSearch: args.enableWebSearch as boolean || false,
+          });
           return {
-            content: [
-              {
-                type: 'text',
-                text: trimResponseText(JSON.stringify(response)),
-              },
-            ],
+            content: [{ type: 'text', text: JSON.stringify(response, null, 2) }],
             isError: false,
           };
-        }
-
-        case 'firecrawl_check_crawl_status': {
-          if (!isStatusCheckOptions(args)) {
-            throw new Error(
-              'Invalid arguments for firecrawl_check_crawl_status'
-            );
-          }
-          const response = await client.getCrawlStatus(args.id);
-
-          const status = `Crawl Status:
-Status: ${response.status}
-Progress: ${response.completed}/${response.total}
-Credits Used: ${response.creditsUsed}
-Expires At: ${response.expiresAt}
-${
-  response.data.length > 0 ? '\nResults:\n' + formatResults(response.data) : ''
-}`;
-          return {
-            content: [{ type: 'text', text: trimResponseText(status) }],
-            isError: false,
-          };
-        }
-
-        case 'firecrawl_search': {
-          if (!isSearchOptions(args)) {
-            throw new Error('Invalid arguments for firecrawl_search');
-          }
-          try {
-            const response = await withRetry(
-              async () =>
-                client.search(args.query, {
-                  ...args,
-                  // @ts-expect-error Extended API options including origin
-                  origin: 'mcp-server',
-                }),
-              'search operation'
-            );
-
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: trimResponseText(JSON.stringify(response, null, 2)),
-                },
-              ],
-              isError: false,
-            };
-          } catch (error) {
-            const errorMessage =
-              error instanceof Error
-                ? error.message
-                : `Search failed: ${JSON.stringify(error)}`;
-            return {
-              content: [{ type: 'text', text: trimResponseText(errorMessage) }],
-              isError: true,
-            };
-          }
-        }
-
-        case 'firecrawl_extract': {
-          if (!isExtractOptions(args)) {
-            throw new Error('Invalid arguments for firecrawl_extract');
-          }
-
-          try {
-            const extractStartTime = Date.now();
-
-            safeLog(
-              'info',
-              `Starting extraction for URLs: ${args.urls.join(', ')}`
-            );
-
-            // Log if using self-hosted instance
-            if (FIRECRAWL_API_URL) {
-              safeLog('info', 'Using self-hosted instance for extraction');
-            }
-
-            const extractResponse = await withRetry(
-              async () =>
-                client.extract({
-                  urls: args.urls,
-                  prompt: args.prompt,
-                  schema: args.schema,
-                  allowExternalLinks: args.allowExternalLinks,
-                  enableWebSearch: args.enableWebSearch,
-                  includeSubdomains: args.includeSubdomains,
-                  origin: 'mcp-server',
-                } as ExtractParams),
-              'extract operation'
-            );
-
-            // Type guard for successful response
-            if (!('success' in extractResponse) || !extractResponse.success) {
-              throw new Error(extractResponse.error || 'Extraction failed');
-            }
-
-            const response = extractResponse as ExtractResponse;
-
-            // Log performance metrics
-            safeLog(
-              'info',
-              `Extraction completed in ${Date.now() - extractStartTime}ms`
-            );
-
-            // Add warning to response if present
-            const result = {
-              content: [
-                {
-                  type: 'text',
-                  text: trimResponseText(
-                    JSON.stringify(response.data, null, 2)
-                  ),
-                },
-              ],
-              isError: false,
-            };
-
-            if (response.warning) {
-              safeLog('warning', response.warning);
-            }
-
-            return result;
-          } catch (error) {
-            const errorMessage =
-              error instanceof Error ? error.message : String(error);
-
-            // Special handling for self-hosted instance errors
-            if (
-              FIRECRAWL_API_URL &&
-              errorMessage.toLowerCase().includes('not supported')
-            ) {
-              safeLog(
-                'error',
-                'Extraction is not supported by this self-hosted instance'
-              );
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: trimResponseText(
-                      'Extraction is not supported by this self-hosted instance. Please ensure LLM support is configured.'
-                    ),
-                  },
-                ],
-                isError: true,
-              };
-            }
-
-            return {
-              content: [{ type: 'text', text: trimResponseText(errorMessage) }],
-              isError: true,
-            };
-          }
         }
 
         default:
           return {
-            content: [
-              { type: 'text', text: trimResponseText(`Unknown tool: ${name}`) },
-            ],
+            content: [{ type: 'text', text: `Unknown tool: ${name}` }],
             isError: true,
           };
       }
@@ -1396,7 +589,7 @@ function trimResponseText(text: string): string {
 // Server startup
 async function runLocalServer() {
   try {
-    console.error('Initializing Firecrawl MCP Server...');
+    console.error('Initializing Firecrawl Lite MCP Server...');
 
     const transport = new StdioServerTransport();
 
@@ -1411,13 +604,13 @@ async function runLocalServer() {
     await server.connect(transport);
 
     // Now that we're connected, we can send logging messages
-    safeLog('info', 'Firecrawl MCP Server initialized successfully');
+    safeLog('info', 'Firecrawl Lite MCP Server initialized successfully');
     safeLog(
       'info',
       `Configuration: API URL: ${FIRECRAWL_API_URL || 'default'}`
     );
 
-    console.error('Firecrawl MCP Server running on stdio');
+    console.error('Firecrawl Lite MCP Server running on stdio');
   } catch (error) {
     console.error('Fatal error running server:', error);
     process.exit(1);
