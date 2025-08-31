@@ -1,6 +1,6 @@
 {
   "name": "firecrawl-lite-mcp-server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Privacy-first, standalone MCP server for web scraping and data extraction using local browser automation and your own LLM API key",
   "type": "module",
   "bin": {
