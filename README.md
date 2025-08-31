@@ -1,6 +1,32 @@
 # Firecrawl Lite MCP Server
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/Licens## 🚀 **Quick Start**
+
+### **📦 Installation Options**
+
+#### **Option 1: Install from npm (Recommended)**
+```bash
+npm install -g firecrawl-lite-mcp-server
+```
+
+#### **Option 2: Install from source**
+```bash
+git clone https://github.com/ariangibson/firecrawl-lite-mcp-server.git
+cd firecrawl-lite-mcp-server
+npm install
+npm run build
+```
+
+### **⚙️ Basic Configuration**
+```bash
+cp .env.example .env
+# Edit .env with your LLM API key
+```
+
+### **▶️ Run the Server**
+```bash
+npm start
+```ttps://opensource.org/licenses/MIT)
 
 A **privacy-first, standalone** MCP server that provides web scraping and data extraction tools using local browser automation and your own LLM API key. **No external dependencies or API keys required** - completely decoupled from Firecrawl's cloud service.
 
@@ -40,101 +66,45 @@ The official MCP server implementation by the Firecrawl team, providing MCP inte
 ### **Philosophy: Simplicity & Privacy First**
 Firecrawl Lite takes a **minimalist approach** - focusing on essential web scraping functionality while maintaining complete privacy and control over your data.
 
-### **Key Differences:**
+### **📊 Feature Comparison:**
 
-| Aspect | Firecrawl Lite ✅ | Original Firecrawl ❌ |
-|--------|-------------------|----------------------|
-| **Deployment** | **Standalone/Local** | Cloud Service |
-| **API Keys** | **Your LLM key only** | Firecrawl API + LLM keys |
-| **Data Privacy** | **100% local processing** | Cloud processing |
-| **Cost Model** | **Pay for your LLM only** | Subscription + LLM costs |
-| **Setup Complexity** | **Single container** | Multi-service deployment |
-| **Bundle Size** | **Lightweight (~50MB)** | Heavy multi-service |
-| **Local LLM Support** | **✅ Ollama/Local LLMs** | Limited local options |
-| **Customization** | **Full control** | Limited customization |
+| Feature | Firecrawl Lite ✅ | Original Firecrawl ❌ |
+|---------|-------------------|----------------------|
+| **🏠 Deployment** | **Standalone/Local** | Cloud Service |
+| **🔑 API Keys Required** | **Your LLM key only** | Firecrawl API + LLM keys |
+| **🔒 Data Privacy** | **100% local processing** | Cloud processing |
+| **💰 Cost Model** | **LLM usage only** | Subscription + LLM costs |
+| **⚙️ Setup Complexity** | **Single container** | Multi-service deployment |
+| **📦 Bundle Size** | **~50MB lightweight** | Heavy multi-service |
+| **🏠 Local LLM Support** | **✅ Ollama/Local LLMs** | Limited local options |
+| **🎛️ Customization** | **Full control** | Limited customization |
+| **🚀 Startup Time** | **< 5 seconds** | Variable (cloud dependent) |
+| **🔧 Maintenance** | **Self-managed** | Managed service |
 
-### **🚀 Benefits of Firecrawl Lite:**
+### **🚀 Key Benefits:**
 
-#### **✅ Privacy & Security**
-- **Zero data leakage** - Everything processed locally
-- **Your API keys only** - No third-party service dependencies
-- **Complete data control** - Your scraped content stays on your machine
-- **Audit trail** - Full visibility into data processing
+#### **🔒 Privacy & Data Sovereignty**
+- **Your data stays yours** - All scraping and processing happens locally
+- **Zero third-party dependencies** - No external APIs or cloud services
+- **Complete audit trail** - Full visibility into data processing
+- **GDPR/CCPA compliant** - No data leaves your infrastructure
 
-#### **✅ Cost Efficiency**
-- **Pay only for LLM usage** - No additional subscription fees
-- **Predictable costs** - Based on your LLM provider's pricing
-- **No hidden charges** - Transparent cost model
+#### **💰 Cost-Effective & Predictable**
+- **Pay only for LLM usage** - No additional subscription or API fees
+- **Transparent pricing** - Costs based on your LLM provider's rates only
+- **No surprise bills** - Fixed cost model you can predict and control
 
-#### **✅ Simplicity & Reliability**
-- **Single container deployment** - Easy to deploy and manage
-- **Minimal dependencies** - Fewer moving parts, fewer failure points
-- **Local LLM compatible** - Works with Ollama and local LLM servers
-- **Fast startup** - Lightweight design means quick initialization
-- **No external service lock-in** - Your data stays with your chosen LLM
+#### **⚡ Performance & Reliability**
+- **Lightning-fast startup** - Lightweight design means quick initialization
+- **Local LLM Support** - Compatible with Ollama and local LLM servers
+- **Minimal resource usage** - Optimized for efficiency and low memory footprint
+- **Single container deployment** - Fewer moving parts, fewer failure points
 
-#### **✅ Developer Experience**
-- **Simple configuration** - Single environment file
-- **Clear documentation** - Focused on essential use cases
-- **TypeScript first** - Full type safety and IntelliSense
-- **Docker ready** - One-command deployment
-
-## �🚀 Quick Start
-
-1. **Clone and install:**
-   ```bash
-   git clone <your-repo-url>
-   cd firecrawl-lite-mcp-server
-   npm install
-   ```
-
-2. **Configure environment:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your LLM API key
-   ```
-
-3. **Build and run:**
-   ```bash
-   npm run build
-   npm start
-   ```
-
-## 🔧 Configuration
-
-### Required Environment Variables
-```bash
-# Your LLM API key (xAI, OpenAI, Anthropic, etc.)
-LLM_API_KEY=your_api_key_here
-
-# LLM provider base URL (more flexible than provider names)
-LLM_PROVIDER_BASE_URL=https://api.x.ai/v1
-
-# LLM model
-LLM_MODEL=grok-code-fast-1
-```
-
-### Optional Configuration
-```bash
-# Proxy configuration (for web scraping and LLM API calls)
-PROXY_SERVER_URL=http://your-proxy.com:8080
-PROXY_SERVER_USERNAME=your_proxy_username
-PROXY_SERVER_PASSWORD=your_proxy_password
-
-# Scraping configuration (anti-detection and rate limiting)
-SCRAPE_USER_AGENT=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
-SCRAPE_VIEWPORT_WIDTH=1920
-SCRAPE_VIEWPORT_HEIGHT=1080
-SCRAPE_DELAY_MIN=1000
-SCRAPE_DELAY_MAX=3000
-SCRAPE_BATCH_DELAY_MIN=2000
-SCRAPE_BATCH_DELAY_MAX=5000
-
-# Retry configuration
-FIRECRAWL_RETRY_MAX_ATTEMPTS=3
-FIRECRAWL_RETRY_INITIAL_DELAY=1000
-FIRECRAWL_RETRY_MAX_DELAY=10000
-```
+#### **🛠️ Developer Experience**
+- **Simple setup** - Single environment file, one-command deployment
+- **Full TypeScript support** - Type safety and excellent IntelliSense
+- **Comprehensive documentation** - Clear examples and configuration guides
+- **Docker ready** - Production-ready containerization included
 
 ## 🛠️ Available Tools (4 Essential Tools)
 
@@ -221,22 +191,7 @@ docker-compose up -d --build
 
 The server will be available at `http://localhost:3000` with a health endpoint at `http://localhost:3000/health`.
 
-## 🎯 MCP Configuration
-
-### **📦 Installation Options**
-
-#### **Option 1: Install from npm (Recommended)**
-```bash
-npm install -g firecrawl-lite-mcp-server
-```
-
-#### **Option 2: Install from source**
-```bash
-git clone https://github.com/ariangibson/firecrawl-lite-mcp-server.git
-cd firecrawl-lite-mcp-server
-npm install
-npm run build
-```
+## 🎯 **MCP Configuration**
 
 ### **🖥️ Application-Specific Setup**
 
@@ -334,54 +289,56 @@ For any MCP-compatible application, use this configuration:
 }
 ```
 
-### **🔧 Advanced Configuration**
-For full configuration options, copy `.env.example` to `.env` and customize:
+### **🔧 Environment Configuration**
+
+#### **Required Variables**
 ```bash
-cp .env.example .env
-# Edit .env with your preferred settings
-```
+# Your LLM API key (xAI, OpenAI, Anthropic, etc.)
+LLM_API_KEY=your_api_key_here
 
-Then use the local installation:
-```json
-{
-  "mcpServers": {
-    "firecrawl-lite": {
-      "command": "node",
-      "args": ["/path/to/firecrawl-lite-mcp-server/dist/index.js"],
-      "envFile": "/path/to/firecrawl-lite-mcp-server/.env"
-    }
-  }
-}
-```
-
-## 🔧 LLM Provider Support
-
-### xAI (Grok)
-```bash
+# LLM provider base URL (more flexible than provider names)
 LLM_PROVIDER_BASE_URL=https://api.x.ai/v1
-LLM_API_KEY=xai-your-key-here
+
+# LLM model
 LLM_MODEL=grok-code-fast-1
 ```
 
-### OpenAI
+#### **LLM Provider Examples**
 ```bash
+# xAI (Grok)
+LLM_PROVIDER_BASE_URL=https://api.x.ai/v1
+LLM_API_KEY=xai-your-key-here
+LLM_MODEL=grok-code-fast-1
+
+# OpenAI
 LLM_PROVIDER_BASE_URL=https://api.openai.com/v1
 LLM_API_KEY=sk-your-key-here
 LLM_MODEL=gpt-4o-mini
-```
 
-### Anthropic
-```bash
+# Anthropic
 LLM_PROVIDER_BASE_URL=https://api.anthropic.com
 LLM_API_KEY=sk-ant-your-key-here
 LLM_MODEL=claude-3-haiku-20240307
-```
 
-### Custom/Local LLM
-```bash
+# Local LLM (Ollama)
 LLM_PROVIDER_BASE_URL=http://localhost:11434/v1
 LLM_API_KEY=your-local-key
 LLM_MODEL=llama2
+```
+
+#### **Optional Configuration**
+```bash
+# Proxy configuration (for web scraping and LLM API calls)
+PROXY_SERVER_URL=http://your-proxy.com:8080
+PROXY_SERVER_USERNAME=your_proxy_username
+PROXY_SERVER_PASSWORD=your_proxy_password
+
+# Scraping configuration (anti-detection and rate limiting)
+SCRAPE_USER_AGENT=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+SCRAPE_VIEWPORT_WIDTH=1920
+SCRAPE_VIEWPORT_HEIGHT=1080
+SCRAPE_DELAY_MIN=1000
+SCRAPE_DELAY_MAX=3000
 ```
 
 ## 📊 Tool Usage Examples
@@ -434,83 +391,6 @@ LLM_MODEL=llama2
   }
 }
 ```
-
-## 🎯 Why Firecrawl Lite?
-
-### **The Privacy-First Alternative to Cloud Scraping**
-
-Firecrawl Lite was created for developers who value **privacy, control, and simplicity** over feature complexity. Here's why you should choose Firecrawl Lite:
-
-#### **🔒 Privacy & Data Sovereignty**
-- **Your data stays yours** - All scraping and processing happens locally
-- **Zero third-party dependencies** - No external APIs or cloud services
-- **Complete audit trail** - Full visibility into what data is processed
-- **GDPR/CCPA compliant** - No data leaves your infrastructure
-
-#### **💰 Cost-Effective & Predictable**
-- **Pay only for LLM usage** - No additional subscription or API fees
-- **Transparent pricing** - Costs based on your LLM provider's rates only
-- **No surprise bills** - Fixed cost model you can predict and control
-
-#### **⚡ Performance & Reliability**
-- **Lightning-fast startup** - Lightweight design means quick initialization
-- **Local LLM Support** - Compatible with Ollama and local LLM servers
-- **Minimal resource usage** - Optimized for efficiency and low memory footprint
-- **Single container deployment** - Fewer moving parts, fewer failure points
-- **Local processing** - All data processing happens on your machine
-
-#### **🛠️ Developer Experience**
-- **Simple setup** - Single environment file, one-command deployment
-- **Full TypeScript support** - Type safety and excellent IntelliSense
-- **Comprehensive documentation** - Clear examples and configuration guides
-- **Docker ready** - Production-ready containerization included
-
-#### **🎯 Perfect For:**
-- **Privacy-conscious developers** who want full control over their data
-- **Cost-sensitive projects** that need predictable expenses
-- **Local LLM users** who want to use Ollama or other local models
-- **Enterprise environments** with strict data governance requirements
-- **Developers who prefer simplicity** over feature bloat
-
-### **Real-World Use Cases:**
-- **Content analysis** for AI applications (local processing)
-- **Data extraction** for research projects (privacy-focused)
-- **Web monitoring** tools (local LLM compatible)
-- **Competitive intelligence** gathering (secure and local)
-- **Academic research** (cost-effective and private)
-
-## 🆚 **Firecrawl Lite vs Original Firecrawl: Feature Comparison**
-
-| Feature | Firecrawl Lite ✅ | Original Firecrawl ❌ |
-|---------|-------------------|----------------------|
-| **🏠 Deployment** | **Standalone/Local** | Cloud Service |
-| **🔑 API Keys Required** | **Your LLM key only** | Firecrawl API + LLM keys |
-| **🔒 Data Privacy** | **100% local processing** | Cloud processing |
-| **💰 Cost Model** | **LLM usage only** | Subscription + LLM costs |
-| **⚙️ Setup Complexity** | **Single container** | Multi-service deployment |
-| **📦 Bundle Size** | **~50MB lightweight** | Heavy multi-service |
-| **🏠 Local LLM Support** | **✅ Ollama/Local LLMs** | Limited local options |
-| **🎛️ Customization** | **Full control** | Limited customization |
-| **🚀 Startup Time** | **< 5 seconds** | Variable (cloud dependent) |
-| **🔧 Maintenance** | **Self-managed** | Managed service |
-
-### **🎯 When to Choose Firecrawl Lite:**
-
-#### **✅ Choose Firecrawl Lite if you need:**
-- **Complete data privacy** and local processing
-- **Predictable, low costs** (LLM usage only)
-- **Local LLM support** (Ollama, local models)
-- **Simple deployment** and maintenance
-- **Full control** over your infrastructure
-- **Enterprise-grade security** requirements
-
-#### **✅ Original Firecrawl is better if you need:**
-- **Advanced crawling** of entire websites
-- **Built-in web search** capabilities
-- **Website mapping** and discovery
-- **Multi-page deep crawling**
-- **LLMs.txt generation**
-- **Managed service** with SLA guarantees
 
 ## 📝 License
 
