@@ -4,46 +4,25 @@
 
 A **privacy-first, standalone** MCP server that provides web scraping and data extraction tools using local browser automation and your own LLM API key. **No external dependencies or API keys required** - completely decoupled from Firecrawl's cloud service.
 
-## 🎯 **What "Local" Means vs "Offline"**
+## � **What Makes Firecrawl Lite Special**
 
-### **✅ What Firecrawl Lite Does:**
+### **🔒 Privacy-First Architecture**
 - **Local Processing** - All web scraping and data extraction happens on your machine
-- **Local LLM Support** - Compatible with Ollama, local LLM servers, and localhost APIs
-- **No External Service Lock-in** - Doesn't require Firecrawl's cloud API
 - **Your Data Stays Local** - Content is processed locally, not sent to third parties
+- **No External Service Lock-in** - Doesn't require Firecrawl's cloud API
+- **Complete Control** - You own your data and infrastructure
 
-### **❌ What Firecrawl Lite Does NOT Do:**
-- **Cannot scrape without internet** - Still needs to access target websites
-- **Cannot work completely offline** - Requires internet for web access and LLM APIs
-- **No cached content processing** - Currently requires live web access
+### **💰 Cost-Effective & Transparent**
+- **Pay Only for LLM Usage** - No additional subscription or API fees
+- **Your LLM Provider** - Compatible with OpenAI, xAI, Anthropic, Ollama, etc.
+- **Predictable Costs** - Transparent pricing based on your chosen LLM rates
 
-### **💡 Real Benefits:**
-- **Privacy**: Your scraped content stays on your machine
-- **Cost Control**: Pay only for your chosen LLM provider
-- **Flexibility**: Use any LLM (OpenAI, xAI, Anthropic, Ollama, etc.)
-- **No Vendor Lock-in**: Switch LLMs anytime without code changes
+### **⚡ Performance & Simplicity**
+- **Lightning-Fast Startup** - Lightweight design means quick initialization
+- **Single Container** - Simple deployment with Docker support
+- **Minimal Resource Usage** - Optimized for efficiency and low memory footprint
 
-## � **Credits & Acknowledgments**
-
-This project is inspired by and builds upon the excellent work of the original Firecrawl projects:
-
-### 🔥 **[Firecrawl](https://firecrawl.com)**
-The original Firecrawl project by **Mendable.ai** - a comprehensive web scraping and crawling platform with advanced features like website mapping, multi-page crawling, and deep research capabilities.
-
-### 🔥 **[Firecrawl MCP Server](https://github.com/firecrawl/firecrawl-mcp-server)**
-The official MCP server implementation by the Firecrawl team, providing MCP integration for their cloud-based scraping service.
-
-**We give huge thanks to the Firecrawl team for their pioneering work in web scraping and MCP integration!** 🚀
-
-> **💡 Looking for a very generous free tier and dead-simple cloud-hosted solution?**  
-> Visit **[firecrawl.com](https://firecrawl.com)** and sign up for a Firecrawl account! Their cloud service offers enterprise-grade web scraping with zero setup complexity.
-
-## 🎯 **How Firecrawl Lite is Different**
-
-### **Philosophy: Simplicity & Privacy First**
-Firecrawl Lite takes a **minimalist approach** - focusing on essential web scraping functionality while maintaining complete privacy and control over your data.
-
-### **📊 Feature Comparison:**
+## 📊 **Feature Comparison**
 
 | Feature | Firecrawl Lite ✅ | Original Firecrawl ❌ |
 |---------|-------------------|----------------------|
@@ -58,32 +37,7 @@ Firecrawl Lite takes a **minimalist approach** - focusing on essential web scrap
 | **🚀 Startup Time** | **< 5 seconds** | Variable (cloud dependent) |
 | **🔧 Maintenance** | **Self-managed** | Managed service |
 
-### **🚀 Key Benefits:**
-
-#### **🔒 Privacy & Data Sovereignty**
-- **Your data stays yours** - All scraping and processing happens locally
-- **Zero third-party dependencies** - No external APIs or cloud services
-- **Complete audit trail** - Full visibility into data processing
-- **GDPR/CCPA compliant** - No data leaves your infrastructure
-
-#### **💰 Cost-Effective & Predictable**
-- **Pay only for LLM usage** - No additional subscription or API fees
-- **Transparent pricing** - Costs based on your LLM provider's rates only
-- **No surprise bills** - Fixed cost model you can predict and control
-
-#### **⚡ Performance & Reliability**
-- **Lightning-fast startup** - Lightweight design means quick initialization
-- **Local LLM Support** - Compatible with Ollama and local LLM servers
-- **Minimal resource usage** - Optimized for efficiency and low memory footprint
-- **Single container deployment** - Fewer moving parts, fewer failure points
-
-#### **🛠️ Developer Experience**
-- **Simple setup** - Single environment file, one-command deployment
-- **Full TypeScript support** - Type safety and excellent IntelliSense
-- **Comprehensive documentation** - Clear examples and configuration guides
-- **Docker ready** - Production-ready containerization included
-
-## 🛠️ Available Tools (4 Essential Tools)
+## �️ **Available Tools**
 
 This standalone version provides local web scraping and data extraction using Puppeteer and your own LLM:
 
@@ -111,146 +65,25 @@ This standalone version provides local web scraping and data extraction using Pu
 - **Parameters**: `urls[]`, `schema`, `prompt`, `enableWebSearch`
 - **Privacy**: Content scraped locally, sent to your LLM only
 
-## ❌ **Intentionally Excluded Tools**
+## 🚀 **Quick Start**
 
-By design, this lite version excludes the following tools to maintain simplicity:
-
-- **`search_web`** - Web search functionality
-- **`map_website`** - Website URL discovery
-- **`crawl_website`** - Multi-page website crawling
-- **`generate_llms_txt`** - LLMs.txt file generation
-- **`deep_research`** - Advanced research capabilities
-- **`crawl_status`** - Crawl job status checking
-
-## �️ **Anti-Detection Features**
-
-Firecrawl Lite includes sophisticated anti-detection measures to handle modern websites with bot protection:
-
-### ✅ **Built-in Anti-Detection**
-- **Realistic Browser Fingerprinting**: Spoofs navigator properties, plugins, and browser APIs
-- **Random Delays**: Adds human-like delays between requests (configurable)
-- **Modern User Agent**: Uses up-to-date Chrome user agent strings
-- **Viewport Simulation**: Sets realistic desktop viewport sizes
-- **Headless Optimization**: Configured for maximum stealth in headless mode
-
-### ✅ **Configurable Settings**
+### **1. Install the package:**
 ```bash
-# Customize user agent
-SCRAPE_USER_AGENT=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36...
-
-# Adjust viewport size
-SCRAPE_VIEWPORT_WIDTH=1920
-SCRAPE_VIEWPORT_HEIGHT=1080
-
-# Control delays (in milliseconds)
-SCRAPE_DELAY_MIN=1000      # Minimum delay before navigation
-SCRAPE_DELAY_MAX=3000      # Maximum delay before navigation
-SCRAPE_BATCH_DELAY_MIN=2000 # Minimum delay between batch requests
-SCRAPE_BATCH_DELAY_MAX=5000 # Maximum delay between batch requests
+npm install -g firecrawl-lite-mcp-server
 ```
 
-### ✅ **Proxy Integration**
-- **Full Proxy Support**: HTTP/HTTPS proxies with authentication
-- **LLM API Proxying**: LLM requests also respect proxy settings
-- **Docker Ready**: Proxy configuration works in containerized deployments
-
-## �🐳 Docker Usage (Optional)
-
-If you prefer Docker deployment:
-
+### **2. Configure your LLM:**
 ```bash
-# Build and run with Docker
-docker-compose up --build
-
-# Run in background
-docker-compose up -d --build
+# Create a .env file or set environment variables
+LLM_API_KEY=your_llm_api_key_here
+LLM_PROVIDER_BASE_URL=https://api.x.ai/v1
+LLM_MODEL=grok-code-fast-1
 ```
 
-The server will be available at `http://localhost:3000` with a health endpoint at `http://localhost:3000/health`.
-
-## 🎯 **MCP Configuration**
-
-### **🖥️ Application-Specific Setup**
+### **3. Configure your MCP client:**
 
 #### **Claude Desktop**
-1. **Install the package:**
-   ```bash
-   npm install -g firecrawl-lite-mcp-server
-   ```
-
-2. **Locate your Claude Desktop config file:**
-   - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - **Windows:** `%APPDATA%/Claude/claude_desktop_config.json`
-   - **Linux:** `~/.config/Claude/claude_desktop_config.json`
-
-3. **Add the server configuration:**
-   ```json
-   {
-     "mcpServers": {
-       "firecrawl-lite": {
-         "command": "firecrawl-lite-mcp-server",
-         "env": {
-           "LLM_API_KEY": "your_llm_api_key_here",
-           "LLM_PROVIDER_BASE_URL": "https://api.x.ai/v1",
-           "LLM_MODEL": "grok-code-fast-1"
-         }
-       }
-     }
-   }
-   ```
-
-4. **Restart Claude Desktop**
-
-#### **Claude Code (CLI)**
-```bash
-# Install globally
-npm install -g firecrawl-lite-mcp-server
-
-# Configure Claude Code
-claude config mcp add firecrawl-lite \
-  --command "firecrawl-lite-mcp-server" \
-  --env LLM_API_KEY=your_llm_api_key_here \
-  --env LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 \
-  --env LLM_MODEL=grok-code-fast-1
-```
-
-#### **Gemini CLI**
-```bash
-# Install globally
-npm install -g firecrawl-lite-mcp-server
-
-# Configure Gemini CLI
-gemini config mcp add firecrawl-lite \
-  --command "firecrawl-lite-mcp-server" \
-  --env LLM_API_KEY=your_llm_api_key_here \
-  --env LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 \
-  --env LLM_MODEL=grok-code-fast-1
-```
-
-#### **Cursor/VS Code**
-1. **Install the package:**
-   ```bash
-   npm install -g firecrawl-lite-mcp-server
-   ```
-
-2. **Open Cursor/VS Code settings and add to MCP configuration:**
-   ```json
-   {
-     "mcpServers": {
-       "firecrawl-lite": {
-         "command": "firecrawl-lite-mcp-server",
-         "env": {
-           "LLM_API_KEY": "your_llm_api_key_here",
-           "LLM_PROVIDER_BASE_URL": "https://api.x.ai/v1",
-           "LLM_MODEL": "grok-code-fast-1"
-         }
-       }
-     }
-   }
-   ```
-
-#### **Other MCP-Compatible Applications**
-For any MCP-compatible application, use this configuration:
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
@@ -266,21 +99,32 @@ For any MCP-compatible application, use this configuration:
 }
 ```
 
-### **🔧 Environment Configuration**
+#### **Claude Code (CLI)**
+```bash
+claude config mcp add firecrawl-lite \
+  --command "firecrawl-lite-mcp-server" \
+  --env LLM_API_KEY=your_llm_api_key_here \
+  --env LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 \
+  --env LLM_MODEL=grok-code-fast-1
+```
 
-#### **Required Variables**
+### **4. Restart your MCP client and start scraping!**
+
+## ⚙️ **Configuration Guide**
+
+### **Required Environment Variables**
 ```bash
 # Your LLM API key (xAI, OpenAI, Anthropic, etc.)
 LLM_API_KEY=your_api_key_here
 
-# LLM provider base URL (more flexible than provider names)
+# LLM provider base URL
 LLM_PROVIDER_BASE_URL=https://api.x.ai/v1
 
-# LLM model
+# LLM model name
 LLM_MODEL=grok-code-fast-1
 ```
 
-#### **LLM Provider Examples**
+### **LLM Provider Examples**
 ```bash
 # xAI (Grok)
 LLM_PROVIDER_BASE_URL=https://api.x.ai/v1
@@ -303,7 +147,7 @@ LLM_API_KEY=your-local-key
 LLM_MODEL=llama2
 ```
 
-#### **Optional Configuration**
+### **Optional Configuration**
 ```bash
 # Proxy configuration (for web scraping and LLM API calls)
 PROXY_SERVER_URL=http://your-proxy.com:8080
@@ -318,7 +162,41 @@ SCRAPE_DELAY_MIN=1000
 SCRAPE_DELAY_MAX=3000
 ```
 
-## 📊 Tool Usage Examples
+## 🛡️ **Anti-Detection Features**
+
+Firecrawl Lite includes sophisticated anti-detection measures to handle modern websites with bot protection:
+
+### ✅ **Built-in Anti-Detection**
+- **Realistic Browser Fingerprinting**: Spoofs navigator properties, plugins, and browser APIs
+- **Random Delays**: Adds human-like delays between requests (configurable)
+- **Modern User Agent**: Uses up-to-date Chrome user agent strings
+- **Viewport Simulation**: Sets realistic desktop viewport sizes
+- **Headless Optimization**: Configured for maximum stealth in headless mode
+
+### ✅ **Configurable Settings**
+```bash
+# Control delays (in milliseconds)
+SCRAPE_DELAY_MIN=1000      # Minimum delay before navigation
+SCRAPE_DELAY_MAX=3000      # Maximum delay before navigation
+SCRAPE_BATCH_DELAY_MIN=2000 # Minimum delay between batch requests
+SCRAPE_BATCH_DELAY_MAX=5000 # Maximum delay between batch requests
+```
+
+## � **Docker Deployment (Optional)**
+
+If you prefer Docker deployment:
+
+```bash
+# Build and run with Docker
+docker-compose up --build
+
+# Run in background
+docker-compose up -d --build
+```
+
+The server will be available at `http://localhost:3000` with a health endpoint at `http://localhost:3000/health`.
+
+## 📊 **Usage Examples**
 
 ### Scrape a webpage
 ```json
@@ -369,6 +247,37 @@ SCRAPE_DELAY_MAX=3000
 }
 ```
 
-## 📝 License
+## ❓ **Important Notes**
+
+### **🌐 Internet Requirements**
+- **Requires Internet Access** - Still needs to access target websites
+- **LLM API Access** - Requires connection to your chosen LLM provider
+- **No Offline Operation** - Cannot work completely offline
+
+### **� Intentionally Excluded Features**
+By design, this lite version excludes advanced features to maintain simplicity:
+- Web search functionality
+- Website URL discovery/mapping
+- Multi-page website crawling
+- LLMs.txt file generation
+- Advanced research capabilities
+- Crawl job status checking
+
+## 🙏 **Credits & Acknowledgments**
+
+This project is inspired by and builds upon the excellent work of the original Firecrawl projects:
+
+### 🔥 **[Firecrawl](https://firecrawl.com)**
+The original Firecrawl project by **Mendable.ai** - a comprehensive web scraping and crawling platform with advanced features like website mapping, multi-page crawling, and deep research capabilities.
+
+### 🔥 **[Firecrawl MCP Server](https://github.com/firecrawl/firecrawl-mcp-server)**
+The official MCP server implementation by the Firecrawl team, providing MCP integration for their cloud-based scraping service.
+
+**We give huge thanks to the Firecrawl team for their pioneering work in web scraping and MCP integration!** 🚀
+
+> **💡 Looking for a very generous free tier and dead-simple cloud-hosted solution?**  
+> Visit **[firecrawl.com](https://firecrawl.com)** and sign up for a Firecrawl account! Their cloud service offers enterprise-grade web scraping with zero setup complexity.
+
+## �📝 **License**
 
 MIT License - see [LICENSE](LICENSE) for details.
