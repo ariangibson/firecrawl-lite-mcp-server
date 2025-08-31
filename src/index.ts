@@ -35,6 +35,30 @@ const DEFAULT_RETRY_INITIAL_DELAY = 1000;
 const DEFAULT_RETRY_MAX_DELAY = 10000;
 const DEFAULT_RETRY_BACKOFF_FACTOR = 2;
 
+// Security constants
+const MAX_URLS_PER_REQUEST = 10;
+
+// Input validation utilities
+function isValidUrl(url: string): boolean {
+  try {
+    const parsedUrl = new URL(url);
+    // Only allow http and https protocols
+    return ['http:', 'https:'].includes(parsedUrl.protocol);
+  } catch {
+    return false;
+  }
+}
+
+function sanitizeUrl(url: string): string {
+  // Remove any potentially dangerous characters
+  return url.trim().replace(/[<>'"]/g, '');
+}
+
+function validatePrompt(prompt: string): boolean {
+  // Basic prompt validation - prevent extremely long prompts
+  return prompt.length > 0 && prompt.length < 10000;
+}
+
 // Types
 interface ScrapedContent {
   url: string;
@@ -165,21 +189,37 @@ const EXTRACT_WITH_SCHEMA_TOOL: Tool = {
 
 // Local web scraping functions
 async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Promise<ScrapedContent> {
+  // SECURITY: Validate and sanitize URL
+  if (!isValidUrl(url)) {
+    return {
+      url,
+      title: '',
+      content: '',
+      markdown: '',
+      html: '',
+      success: false,
+      error: 'Invalid URL format. Only HTTP and HTTPS URLs are allowed.'
+    };
+  }
+
+  const sanitizedUrl = sanitizeUrl(url);
+
   let browser;
   try {
     // Get proxy configuration
     const proxyUrl = CONFIG.proxy.url;
     const proxyUsername = CONFIG.proxy.username;
     const proxyPassword = CONFIG.proxy.password;
-    
+
     // Get scraping configuration
     const customUserAgent = CONFIG.scraping.userAgent;
     const viewportWidth = CONFIG.scraping.viewportWidth;
     const viewportHeight = CONFIG.scraping.viewportHeight;
     const delayMin = CONFIG.scraping.delayMin;
     const delayMax = CONFIG.scraping.delayMax;
-    
+
     // Build Puppeteer launch options with enhanced anti-detection
+    // SECURITY: Removed --disable-web-security which is a major security risk
     const launchOptions: any = {
       headless: true,
       args: [
@@ -190,7 +230,6 @@ async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Prom
         '--no-first-run',
         '--no-zygote',
         '--disable-gpu',
-        '--disable-web-security',
         '--disable-features=VizDisplayCompositor',
         `--user-agent=${customUserAgent}`
       ]
@@ -240,10 +279,11 @@ async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Prom
     // Add random delay before navigation
     const delay = Math.floor(Math.random() * (delayMax - delayMin)) + delayMin;
     await new Promise(resolve => setTimeout(resolve, delay));
-    
-    await page.goto(url, { 
-      waitUntil: 'networkidle2', 
-      timeout: 30000 
+
+    // SECURITY: Use sanitized URL and add timeout
+    await page.goto(sanitizedUrl, {
+      waitUntil: 'networkidle2',
+      timeout: 30000
     });
     
     // Wait additional time for dynamic content
@@ -319,6 +359,28 @@ async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Prom
 }
 
 async function extractDataWithLLM(url: string, prompt: string, schema?: any): Promise<ExtractedData> {
+  // SECURITY: Validate inputs
+  if (!isValidUrl(url)) {
+    return {
+      url,
+      data: null,
+      success: false,
+      error: 'Invalid URL format. Only HTTP and HTTPS URLs are allowed.'
+    };
+  }
+
+  if (!validatePrompt(prompt)) {
+    return {
+      url,
+      data: null,
+      success: false,
+      error: 'Invalid prompt. Prompt must be between 1 and 10,000 characters.'
+    };
+  }
+
+  const sanitizedUrl = sanitizeUrl(url);
+  const sanitizedPrompt = prompt.trim();
+
   try {
     // First scrape the webpage
     const scraped = await scrapeWebpage(url, true);
@@ -349,7 +411,7 @@ async function extractDataWithLLM(url: string, prompt: string, schema?: any): Pr
     const extractionPrompt = `
 You are a data extraction assistant. Extract information from the following webpage content based on the user's request.
 
-Webpage URL: ${url}
+Webpage URL: ${sanitizedUrl}
 Webpage Title: ${scraped.title}
 
 Content:
@@ -357,7 +419,7 @@ ${scraped.content}
 
 ${schema ? `Extract data according to this JSON schema: ${JSON.stringify(schema, null, 2)}` : ''}
 
-User Request: ${prompt}
+User Request: ${sanitizedPrompt}
 
 Please provide the extracted data in JSON format. ${schema ? 'Ensure the response matches the provided schema.' : 'Structure the data logically based on the content and request.'}
 `;
@@ -394,7 +456,7 @@ Please provide the extracted data in JSON format. ${schema ? 'Ensure the respons
       console.error(`Using proxy for LLM API: ${proxyUrl}`);
     }
     
-    // Call LLM API
+    // Call LLM API with timeout for security
     const response = await axios.post(`${LLM_PROVIDER_BASE_URL}/chat/completions`, {
       model: LLM_MODEL,
       messages: [
@@ -405,7 +467,12 @@ Please provide the extracted data in JSON format. ${schema ? 'Ensure the respons
       ],
       temperature: 0.1,
       max_tokens: 2000
-    }, axiosConfig);
+    }, {
+      ...axiosConfig,
+      timeout: 60000, // 60 second timeout for security
+      maxContentLength: 10 * 1024 * 1024, // 10MB max response size
+      maxBodyLength: 10 * 1024 * 1024
+    });
     
     const llmResponse = response.data.choices[0].message.content;
     
@@ -427,11 +494,26 @@ Please provide the extracted data in JSON format. ${schema ? 'Ensure the respons
     }
     
   } catch (error) {
+    // SECURITY: Prevent information disclosure in error messages
+    const isAxiosError = axios.isAxiosError(error);
+    let safeErrorMessage = 'An error occurred while processing the request';
+
+    if (isAxiosError) {
+      // Only expose safe error information
+      if (error.response?.status === 401) {
+        safeErrorMessage = 'Authentication failed with LLM provider';
+      } else if (error.response?.status === 429) {
+        safeErrorMessage = 'Rate limit exceeded with LLM provider';
+      } else if (error.code === 'ECONNABORTED') {
+        safeErrorMessage = 'Request timeout - LLM provider took too long to respond';
+      }
+    }
+
     return {
-      url,
+      url: sanitizedUrl,
       data: null,
       success: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: safeErrorMessage
     };
   }
 }
@@ -582,7 +664,12 @@ server.setRequestHandler(
           if (!isScrapeOptions(args)) {
             throw new Error('Invalid arguments for scrape_page');
           }
-          
+
+          // SECURITY: Validate URL before processing
+          if (!isValidUrl(args.url)) {
+            throw new Error('Invalid URL format. Only HTTP and HTTPS URLs are allowed.');
+          }
+
           const result = await scrapeWebpage(args.url, args.onlyMainContent !== false);
           return {
             content: [{ type: 'text', text: result.success ? result.markdown : `Error: ${result.error}` }],
@@ -594,7 +681,18 @@ server.setRequestHandler(
           if (!isBatchScrapeOptions(args)) {
             throw new Error('Invalid arguments for batch_scrape: urls array required');
           }
-          
+
+          // SECURITY: Validate all URLs before processing
+          const invalidUrls = args.urls.filter(url => !isValidUrl(url));
+          if (invalidUrls.length > 0) {
+            throw new Error(`Invalid URL format detected: ${invalidUrls.join(', ')}. Only HTTP and HTTPS URLs are allowed.`);
+          }
+
+          // SECURITY: Limit batch size to prevent abuse
+          if (args.urls.length > 10) {
+            throw new Error('Batch size limited to 10 URLs maximum for security and performance reasons.');
+          }
+
           const results = [];
           for (const url of args.urls) {
             try {
@@ -627,6 +725,22 @@ server.setRequestHandler(
             throw new Error('Invalid arguments for extract_data: urls array and prompt required');
           }
 
+          // SECURITY: Validate all URLs
+          const invalidUrls = args.urls.filter(url => !isValidUrl(url));
+          if (invalidUrls.length > 0) {
+            throw new Error(`Invalid URL format detected: ${invalidUrls.join(', ')}. Only HTTP and HTTPS URLs are allowed.`);
+          }
+
+          // SECURITY: Validate prompt
+          if (!validatePrompt(args.prompt)) {
+            throw new Error('Invalid prompt. Prompt must be between 1 and 10,000 characters.');
+          }
+
+          // SECURITY: Limit batch size
+          if (args.urls.length > 5) {
+            throw new Error('Extraction limited to 5 URLs maximum for security and performance reasons.');
+          }
+
           const results = [];
           for (const url of args.urls) {
             try {
@@ -646,7 +760,7 @@ server.setRequestHandler(
             // Add delay between requests
             await delay(1000);
           }
-          
+
           return {
             content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
             isError: false,
@@ -658,26 +772,72 @@ server.setRequestHandler(
             throw new Error('Invalid arguments for extract_with_schema: urls array, schema, and prompt required');
           }
 
-          const results = [];
+          // Security validations
+          if (!Array.isArray(args.urls) || args.urls.length === 0) {
+            throw new Error('Invalid arguments: urls must be a non-empty array');
+          }
+
+          if (args.urls.length > MAX_URLS_PER_REQUEST) {
+            throw new Error(`Too many URLs: maximum ${MAX_URLS_PER_REQUEST} URLs allowed per request`);
+          }
+
+          // Validate and sanitize each URL
+          const sanitizedUrls: string[] = [];
           for (const url of args.urls) {
+            if (typeof url !== 'string') {
+              throw new Error('Invalid URL format: all URLs must be strings');
+            }
+
+            if (!isValidUrl(url)) {
+              throw new Error(`Invalid URL: ${url}`);
+            }
+
+            const sanitizedUrl = sanitizeUrl(url);
+            if (!sanitizedUrl) {
+              throw new Error(`Failed to sanitize URL: ${url}`);
+            }
+
+            sanitizedUrls.push(sanitizedUrl);
+          }
+
+          // Validate and sanitize prompt
+          if (typeof args.prompt !== 'string') {
+            throw new Error('Invalid prompt: must be a string');
+          }
+
+          if (!validatePrompt(args.prompt)) {
+            throw new Error('Invalid prompt: must be between 1 and 10,000 characters');
+          }
+
+          const sanitizedPrompt = args.prompt.trim();
+
+          // Validate schema (basic validation)
+          if (typeof args.schema !== 'object' || args.schema === null) {
+            throw new Error('Invalid schema: must be a valid object');
+          }
+
+          const results = [];
+          for (const url of sanitizedUrls) {
             try {
-              const result = await extractDataWithLLM(url, args.prompt || 'Extract data according to the provided schema', args.schema);
+              const result = await extractDataWithLLM(url, sanitizedPrompt, args.schema);
               results.push({
                 url,
                 success: result.success,
                 data: result.success ? result.data : `Error: ${result.error}`
               });
             } catch (error) {
+              // Prevent information disclosure in error messages
+              const safeErrorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
               results.push({
                 url,
                 success: false,
-                error: error instanceof Error ? error.message : String(error)
+                error: safeErrorMessage.replace(/[^\w\s\-.:]/g, '') // Remove potentially sensitive characters
               });
             }
-            // Add delay between requests
+            // Add delay between requests to prevent rate limiting
             await delay(1000);
           }
-          
+
           return {
             content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
             isError: false,
