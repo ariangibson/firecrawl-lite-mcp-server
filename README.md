@@ -6,8 +6,8 @@ A lightweight, privacy-focused MCP server for essential Firecrawl tools using yo
 
 1. **Clone and install:**
    ```bash
-   git clone <your-repo-url>
-   cd firecrawl-mcp-server
+   git clone https://github.com/ariangibson/firecrawl-lite-mcp-server.git
+   cd firecrawl-lite-mcp-server
    npm install
    ```
 
