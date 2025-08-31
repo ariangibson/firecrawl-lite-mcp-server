@@ -203,55 +203,132 @@ The server will be available at `http://localhost:3000` with a health endpoint a
 
 ## 🎯 MCP Configuration
 
-### For Cursor/VS Code:
+### **📦 Installation Options**
+
+#### **Option 1: Install from npm (Recommended)**
+```bash
+npm install -g firecrawl-lite-mcp-server
+```
+
+#### **Option 2: Install from source**
+```bash
+git clone https://github.com/ariangibson/firecrawl-lite-mcp-server.git
+cd firecrawl-lite-mcp-server
+npm install
+npm run build
+```
+
+### **🖥️ Application-Specific Setup**
+
+#### **Claude Desktop**
+1. **Install the package:**
+   ```bash
+   npm install -g firecrawl-lite-mcp-server
+   ```
+
+2. **Locate your Claude Desktop config file:**
+   - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows:** `%APPDATA%/Claude/claude_desktop_config.json`
+   - **Linux:** `~/.config/Claude/claude_desktop_config.json`
+
+3. **Add the server configuration:**
+   ```json
+   {
+     "mcpServers": {
+       "firecrawl-lite": {
+         "command": "firecrawl-lite-mcp-server",
+         "env": {
+           "LLM_API_KEY": "your_llm_api_key_here",
+           "LLM_PROVIDER_BASE_URL": "https://api.x.ai/v1",
+           "LLM_MODEL": "grok-code-fast-1"
+         }
+       }
+     }
+   }
+   ```
+
+4. **Restart Claude Desktop**
+
+#### **Claude Code (CLI)**
+```bash
+# Install globally
+npm install -g firecrawl-lite-mcp-server
+
+# Configure Claude Code
+claude config mcp add firecrawl-lite \
+  --command "firecrawl-lite-mcp-server" \
+  --env LLM_API_KEY=your_llm_api_key_here \
+  --env LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 \
+  --env LLM_MODEL=grok-code-fast-1
+```
+
+#### **Gemini CLI**
+```bash
+# Install globally
+npm install -g firecrawl-lite-mcp-server
+
+# Configure Gemini CLI
+gemini config mcp add firecrawl-lite \
+  --command "firecrawl-lite-mcp-server" \
+  --env LLM_API_KEY=your_llm_api_key_here \
+  --env LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 \
+  --env LLM_MODEL=grok-code-fast-1
+```
+
+#### **Cursor/VS Code**
+1. **Install the package:**
+   ```bash
+   npm install -g firecrawl-lite-mcp-server
+   ```
+
+2. **Open Cursor/VS Code settings and add to MCP configuration:**
+   ```json
+   {
+     "mcpServers": {
+       "firecrawl-lite": {
+         "command": "firecrawl-lite-mcp-server",
+         "env": {
+           "LLM_API_KEY": "your_llm_api_key_here",
+           "LLM_PROVIDER_BASE_URL": "https://api.x.ai/v1",
+           "LLM_MODEL": "grok-code-fast-1"
+         }
+       }
+     }
+   }
+   ```
+
+#### **Other MCP-Compatible Applications**
+For any MCP-compatible application, use this configuration:
 ```json
 {
   "mcpServers": {
     "firecrawl-lite": {
-      "command": "node",
-      "args": ["/path/to/firecrawl-lite-mcp-server/dist/index.js"],
+      "command": "firecrawl-lite-mcp-server",
       "env": {
-        "LLM_API_KEY": "your_key_here",
+        "LLM_API_KEY": "your_llm_api_key_here",
         "LLM_PROVIDER_BASE_URL": "https://api.x.ai/v1",
-        "LLM_MODEL": "grok-code-fast-1",
-        "PROXY_SERVER_URL": "http://your-proxy.com:8080",
-        "PROXY_SERVER_USERNAME": "your_proxy_username",
-        "PROXY_SERVER_PASSWORD": "your_proxy_password",
-        "SCRAPE_USER_AGENT": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36...",
-        "SCRAPE_VIEWPORT_WIDTH": "1920",
-        "SCRAPE_VIEWPORT_HEIGHT": "1080",
-        "SCRAPE_DELAY_MIN": "1000",
-        "SCRAPE_DELAY_MAX": "3000",
-        "SCRAPE_BATCH_DELAY_MIN": "2000",
-        "SCRAPE_BATCH_DELAY_MAX": "5000"
+        "LLM_MODEL": "grok-code-fast-1"
       }
     }
   }
 }
 ```
 
-### For Claude Desktop:
+### **🔧 Advanced Configuration**
+For full configuration options, copy `.env.example` to `.env` and customize:
+```bash
+cp .env.example .env
+# Edit .env with your preferred settings
+```
+
+Then use the local installation:
 ```json
 {
   "mcpServers": {
     "firecrawl-lite": {
       "command": "node",
-      "args": ["/absolute/path/to/dist/index.js"],
-      "env": {
-        "LLM_API_KEY": "your_key_here",
-        "LLM_PROVIDER_BASE_URL": "https://api.x.ai/v1",
-        "LLM_MODEL": "grok-code-fast-1",
-        "PROXY_SERVER_URL": "http://your-proxy.com:8080",
-        "PROXY_SERVER_USERNAME": "your_proxy_username",
-        "PROXY_SERVER_PASSWORD": "your_proxy_password",
-        "SCRAPE_USER_AGENT": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36...",
-        "SCRAPE_VIEWPORT_WIDTH": "1920",
-        "SCRAPE_VIEWPORT_HEIGHT": "1080",
-        "SCRAPE_DELAY_MIN": "1000",
-        "SCRAPE_DELAY_MAX": "3000",
-        "SCRAPE_BATCH_DELAY_MIN": "2000",
-        "SCRAPE_BATCH_DELAY_MAX": "5000"
-      }
+      "args": ["/path/to/firecrawl-lite-mcp-server/dist/index.js"],
+      "envFile": "/path/to/firecrawl-lite-mcp-server/.env"
     }
   }
 }

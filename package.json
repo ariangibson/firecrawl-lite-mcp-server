@@ -34,12 +34,12 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "keywords": [
-    "mcp",
-    "web-scraping",
-    "llm",
-    "firecrawl-lite",
-    "lightweight"
-  ],
-  "author": "ariangibson"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ariangibson/firecrawl-lite-mcp-server.git"
+  },
+  "homepage": "https://github.com/ariangibson/firecrawl-lite-mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/ariangibson/firecrawl-lite-mcp-server/issues"
+  }
 }
