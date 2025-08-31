@@ -4,6 +4,25 @@
 
 A **privacy-first, standalone** MCP server that provides web scraping and data extraction tools using local browser automation and your own LLM API key. **No external dependencies or API keys required** - completely decoupled from Firecrawl's cloud service.
 
+## 🎯 **What "Local" Means vs "Offline"**
+
+### **✅ What Firecrawl Lite Does:**
+- **Local Processing** - All web scraping and data extraction happens on your machine
+- **Local LLM Support** - Compatible with Ollama, local LLM servers, and localhost APIs
+- **No External Service Lock-in** - Doesn't require Firecrawl's cloud API
+- **Your Data Stays Local** - Content is processed locally, not sent to third parties
+
+### **❌ What Firecrawl Lite Does NOT Do:**
+- **Cannot scrape without internet** - Still needs to access target websites
+- **Cannot work completely offline** - Requires internet for web access and LLM APIs
+- **No cached content processing** - Currently requires live web access
+
+### **💡 Real Benefits:**
+- **Privacy**: Your scraped content stays on your machine
+- **Cost Control**: Pay only for your chosen LLM provider
+- **Flexibility**: Use any LLM (OpenAI, xAI, Anthropic, Ollama, etc.)
+- **No Vendor Lock-in**: Switch LLMs anytime without code changes
+
 ## � **Credits & Acknowledgments**
 
 This project is inspired by and builds upon the excellent work of the original Firecrawl projects:
@@ -31,7 +50,7 @@ Firecrawl Lite takes a **minimalist approach** - focusing on essential web scrap
 | **Cost Model** | **Pay for your LLM only** | Subscription + LLM costs |
 | **Setup Complexity** | **Single container** | Multi-service deployment |
 | **Bundle Size** | **Lightweight (~50MB)** | Heavy multi-service |
-| **Offline Capability** | **Works offline** | Requires internet |
+| **Local LLM Support** | **✅ Ollama/Local LLMs** | Limited local options |
 | **Customization** | **Full control** | Limited customization |
 
 ### **🚀 Benefits of Firecrawl Lite:**
@@ -50,8 +69,9 @@ Firecrawl Lite takes a **minimalist approach** - focusing on essential web scrap
 #### **✅ Simplicity & Reliability**
 - **Single container deployment** - Easy to deploy and manage
 - **Minimal dependencies** - Fewer moving parts, fewer failure points
+- **Local LLM compatible** - Works with Ollama and local LLM servers
 - **Fast startup** - Lightweight design means quick initialization
-- **Offline capable** - Works without internet connectivity
+- **No external service lock-in** - Your data stays with your chosen LLM
 
 #### **✅ Developer Experience**
 - **Simple configuration** - Single environment file
@@ -434,9 +454,10 @@ Firecrawl Lite was created for developers who value **privacy, control, and simp
 
 #### **⚡ Performance & Reliability**
 - **Lightning-fast startup** - Lightweight design means quick initialization
-- **Offline capable** - Works without internet connectivity for scraping
+- **Local LLM Support** - Compatible with Ollama and local LLM servers
 - **Minimal resource usage** - Optimized for efficiency and low memory footprint
 - **Single container deployment** - Fewer moving parts, fewer failure points
+- **Local processing** - All data processing happens on your machine
 
 #### **🛠️ Developer Experience**
 - **Simple setup** - Single environment file, one-command deployment
@@ -447,14 +468,14 @@ Firecrawl Lite was created for developers who value **privacy, control, and simp
 #### **🎯 Perfect For:**
 - **Privacy-conscious developers** who want full control over their data
 - **Cost-sensitive projects** that need predictable expenses
-- **Offline-first applications** that require local processing
+- **Local LLM users** who want to use Ollama or other local models
 - **Enterprise environments** with strict data governance requirements
 - **Developers who prefer simplicity** over feature bloat
 
 ### **Real-World Use Cases:**
 - **Content analysis** for AI applications (local processing)
 - **Data extraction** for research projects (privacy-focused)
-- **Web monitoring** tools (offline capable)
+- **Web monitoring** tools (local LLM compatible)
 - **Competitive intelligence** gathering (secure and local)
 - **Academic research** (cost-effective and private)
 
@@ -468,7 +489,7 @@ Firecrawl Lite was created for developers who value **privacy, control, and simp
 | **💰 Cost Model** | **LLM usage only** | Subscription + LLM costs |
 | **⚙️ Setup Complexity** | **Single container** | Multi-service deployment |
 | **📦 Bundle Size** | **~50MB lightweight** | Heavy multi-service |
-| **📴 Offline Capability** | **Works offline** | Requires internet |
+| **🏠 Local LLM Support** | **✅ Ollama/Local LLMs** | Limited local options |
 | **🎛️ Customization** | **Full control** | Limited customization |
 | **🚀 Startup Time** | **< 5 seconds** | Variable (cloud dependent) |
 | **🔧 Maintenance** | **Self-managed** | Managed service |
@@ -478,8 +499,8 @@ Firecrawl Lite was created for developers who value **privacy, control, and simp
 #### **✅ Choose Firecrawl Lite if you need:**
 - **Complete data privacy** and local processing
 - **Predictable, low costs** (LLM usage only)
+- **Local LLM support** (Ollama, local models)
 - **Simple deployment** and maintenance
-- **Offline capability** for scraping
 - **Full control** over your infrastructure
 - **Enterprise-grade security** requirements
 
