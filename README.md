@@ -1,32 +1,6 @@
 # Firecrawl Lite MCP Server
 
-[![License: MIT](https://img.shields.io/badge/Licens## 🚀 **Quick Start**
-
-### **📦 Installation Options**
-
-#### **Option 1: Install from npm (Recommended)**
-```bash
-npm install -g firecrawl-lite-mcp-server
-```
-
-#### **Option 2: Install from source**
-```bash
-git clone https://github.com/ariangibson/firecrawl-lite-mcp-server.git
-cd firecrawl-lite-mcp-server
-npm install
-npm run build
-```
-
-### **⚙️ Basic Configuration**
-```bash
-cp .env.example .env
-# Edit .env with your LLM API key
-```
-
-### **▶️ Run the Server**
-```bash
-npm start
-```ttps://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A **privacy-first, standalone** MCP server that provides web scraping and data extraction tools using local browser automation and your own LLM API key. **No external dependencies or API keys required** - completely decoupled from Firecrawl's cloud service.
 
