@@ -6,15 +6,24 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3001:3001"
+      - "3000:3000"
     environment:
-      - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}
-      - FIRECRAWL_API_URL=${FIRECRAWL_API_URL}
+      - HTTP_STREAMABLE_SERVER=true
       - LLM_API_KEY=${LLM_API_KEY}
-      - LLM_PROVIDER=${LLM_PROVIDER}
+      - LLM_PROVIDER_BASE_URL=${LLM_PROVIDER_BASE_URL}
       - LLM_MODEL=${LLM_MODEL}
+      - PROXY_SERVER_URL=${PROXY_SERVER_URL}
+      - PROXY_SERVER_USERNAME=${PROXY_SERVER_USERNAME}
+      - PROXY_SERVER_PASSWORD=${PROXY_SERVER_PASSWORD}
+      - SCRAPE_USER_AGENT=${SCRAPE_USER_AGENT}
+      - SCRAPE_VIEWPORT_WIDTH=${SCRAPE_VIEWPORT_WIDTH}
+      - SCRAPE_VIEWPORT_HEIGHT=${SCRAPE_VIEWPORT_HEIGHT}
+      - SCRAPE_DELAY_MIN=${SCRAPE_DELAY_MIN}
+      - SCRAPE_DELAY_MAX=${SCRAPE_DELAY_MAX}
+      - SCRAPE_BATCH_DELAY_MIN=${SCRAPE_BATCH_DELAY_MIN}
+      - SCRAPE_BATCH_DELAY_MAX=${SCRAPE_BATCH_DELAY_MAX}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

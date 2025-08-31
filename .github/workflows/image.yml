@@ -32,6 +32,6 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/firecrawl/firecrawl-mcp-server:latest
-          cache-from: type=registry,ref=ghcr.io/firecrawl/firecrawl-mcp-server:latest
+          tags: ghcr.io/ariangibson/firecrawl-lite-mcp-server:latest
+          cache-from: type=registry,ref=ghcr.io/ariangibson/firecrawl-lite-mcp-server:latest
           cache-to: type=inline

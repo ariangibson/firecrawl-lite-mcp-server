@@ -1,7 +1,7 @@
 {
   "name": "firecrawl-lite-mcp-server",
   "version": "1.0.0",
-  "description": "Lightweight MCP server for essential Firecrawl tools using your own LLM API key",
+  "description": "Privacy-first, standalone MCP server for web scraping and data extraction using local browser automation and your own LLM API key",
   "type": "module",
   "bin": {
     "firecrawl-lite-mcp-server": "dist/index.js"
@@ -12,14 +12,18 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsc && node dist/index.js"
+    "dev": "tsc && node dist/index.js",
+    "lint": "tsc --noEmit"
   },
   "license": "MIT",
   "dependencies": {
-    "@mendable/firecrawl-js": "^3.0.3",
     "@modelcontextprotocol/sdk": "^1.17.3",
+    "@types/cheerio": "^0.22.35",
+    "axios": "^1.11.0",
+    "cheerio": "^1.1.2",
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
+    "puppeteer": "^24.17.1",
     "ws": "^8.18.1"
   },
   "devDependencies": {

@@ -1,28 +1,74 @@
 #!/usr/bin/env node
 
+// Core MCP SDK imports
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
   Tool,
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import FirecrawlApp, {
-  type ScrapeOptions,
-  type MapOptions,
-  type Document,
-} from '@mendable/firecrawl-js';
 
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-
+// Web framework and utilities
 import express, { Request, Response } from 'express';
-import dotenv from 'dotenv';
 import { randomUUID } from 'node:crypto';
+
+// External dependencies
+import dotenv from 'dotenv';
+import axios from 'axios';
+import puppeteer from 'puppeteer';
 
 dotenv.config();
 
-// Lightweight tool definitions for essential Firecrawl functionality
+// Constants
+const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const DEFAULT_VIEWPORT_WIDTH = 1920;
+const DEFAULT_VIEWPORT_HEIGHT = 1080;
+const DEFAULT_SCRAPE_DELAY_MIN = 1000;
+const DEFAULT_SCRAPE_DELAY_MAX = 3000;
+const DEFAULT_BATCH_DELAY_MIN = 2000;
+const DEFAULT_BATCH_DELAY_MAX = 5000;
+const DEFAULT_RETRY_ATTEMPTS = 3;
+const DEFAULT_RETRY_INITIAL_DELAY = 1000;
+const DEFAULT_RETRY_MAX_DELAY = 10000;
+const DEFAULT_RETRY_BACKOFF_FACTOR = 2;
+
+// Types
+interface ScrapedContent {
+  url: string;
+  title: string;
+  content: string;
+  markdown: string;
+  html: string;
+  success: boolean;
+  error?: string;
+}
+
+interface ExtractedData {
+  url: string;
+  data: any;
+  success: boolean;
+  error?: string;
+}
+
+interface ScrapeOptions {
+  url: string;
+  onlyMainContent?: boolean;
+}
+
+interface BatchScrapeOptions {
+  urls: string[];
+  onlyMainContent?: boolean;
+}
+
+interface ExtractOptions {
+  urls: string[];
+  prompt: string;
+  schema?: any;
+  enableWebSearch?: boolean;
+}
 const SCRAPE_TOOL: Tool = {
   name: 'scrape_page',
   description: 'Extract content from a single webpage',
@@ -115,120 +161,283 @@ const EXTRACT_WITH_SCHEMA_TOOL: Tool = {
   },
 };
 
-// Remove all complex tools - keep only essential ones above
+// Lightweight tool definitions for essential Firecrawl functionality
 
-// /**
-//  * Parameters for LLMs.txt generation operations.
-//  */
-// interface GenerateLLMsTextParams {
-//   /**
-//    * Maximum number of URLs to process (1-100)
-//    * @default 10
-//    */
-//   maxUrls?: number;
-//   /**
-//    * Whether to show the full LLMs-full.txt in the response
-//    * @default false
-//    */
-//   showFullText?: boolean;
-//   /**
-//    * Experimental flag for streaming
-//    */
-//   __experimental_stream?: boolean;
-// }
-
-/**
- * Response interface for LLMs.txt generation operations.
- */
-// interface GenerateLLMsTextResponse {
-//   success: boolean;
-//   id: string;
-// }
-
-/**
- * Status response interface for LLMs.txt generation operations.
- */
-// interface GenerateLLMsTextStatusResponse {
-//   success: boolean;
-//   data: {
-//     llmstxt: string;
-//     llmsfulltxt?: string;
-//   };
-//   status: 'processing' | 'completed' | 'failed';
-//   error?: string;
-//   expiresAt: string;
-// }
-
-interface StatusCheckOptions {
-  id: string;
-}
-
-interface SearchOptions {
-  query: string;
-  limit?: number;
-  lang?: string;
-  country?: string;
-  tbs?: string;
-  filter?: string;
-  location?: {
-    country?: string;
-    languages?: string[];
-  };
-  scrapeOptions?: {
-    formats?: any[];
-    onlyMainContent?: boolean;
-    waitFor?: number;
-    includeTags?: string[];
-    excludeTags?: string[];
-    timeout?: number;
-  };
-  sources?: Array<
-    | {
-        type: 'web';
-        tbs?: string;
-        location?: string;
+// Local web scraping functions
+async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Promise<ScrapedContent> {
+  let browser;
+  try {
+    // Get proxy configuration
+    const proxyUrl = CONFIG.proxy.url;
+    const proxyUsername = CONFIG.proxy.username;
+    const proxyPassword = CONFIG.proxy.password;
+    
+    // Get scraping configuration
+    const customUserAgent = CONFIG.scraping.userAgent;
+    const viewportWidth = CONFIG.scraping.viewportWidth;
+    const viewportHeight = CONFIG.scraping.viewportHeight;
+    const delayMin = CONFIG.scraping.delayMin;
+    const delayMax = CONFIG.scraping.delayMax;
+    
+    // Build Puppeteer launch options with enhanced anti-detection
+    const launchOptions: any = {
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        `--user-agent=${customUserAgent}`
+      ]
+    };
+    
+    // Add proxy configuration if available
+    if (proxyUrl) {
+      launchOptions.args.push(`--proxy-server=${proxyUrl}`);
+      
+      // If proxy requires authentication, we'll handle it in the page setup
+      if (proxyUsername && proxyPassword) {
+        console.error(`Using authenticated proxy: ${proxyUrl}`);
+      } else {
+        console.error(`Using proxy: ${proxyUrl}`);
       }
-    | {
-        type: 'images';
+    }
+    
+    browser = await puppeteer.launch(launchOptions);
+    
+    const page = await browser.newPage();
+    
+    // Enhanced anti-detection setup
+    await page.setUserAgent(customUserAgent);
+    
+    // Set viewport to common desktop size
+    await page.setViewport({ width: viewportWidth, height: viewportHeight });
+    
+    // Add common browser properties to avoid detection
+    await page.evaluateOnNewDocument(() => {
+      // Override navigator properties
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+      Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+      
+      // Mock common browser APIs
+      (window as any).chrome = { runtime: {} };
+    });
+    
+    // Handle proxy authentication if credentials are provided
+    if (proxyUrl && proxyUsername && proxyPassword) {
+      await page.authenticate({
+        username: proxyUsername,
+        password: proxyPassword
+      });
+    }
+    
+    // Add random delay before navigation
+    const delay = Math.floor(Math.random() * (delayMax - delayMin)) + delayMin;
+    await new Promise(resolve => setTimeout(resolve, delay));
+    
+    await page.goto(url, { 
+      waitUntil: 'networkidle2', 
+      timeout: 30000 
+    });
+    
+    // Wait additional time for dynamic content
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Extract title
+    const title = await page.title();
+    
+    // Extract content based on preference
+    let content = '';
+    let markdown = '';
+    
+    if (onlyMainContent) {
+      // Try to extract main content using common selectors
+      const mainContent = await page.evaluate(() => {
+        const selectors = [
+          'main',
+          '[role="main"]',
+          '.content',
+          '.post-content',
+          '.entry-content',
+          'article',
+          '.article-content',
+          '#content',
+          '.main-content'
+        ];
+        
+        for (const selector of selectors) {
+          const element = document.querySelector(selector);
+          if (element && element.textContent && element.textContent.trim().length > 100) {
+            return element.textContent.trim();
+          }
+        }
+        
+        // Fallback to body content
+        return document.body.textContent || '';
+      });
+      content = mainContent;
+      markdown = content;
+    } else {
+      // Extract full page content
+      content = await page.evaluate(() => document.body.textContent || '');
+      markdown = content;
+    }
+    
+    // Get HTML
+    const html = await page.content();
+    
+    return {
+      url,
+      title,
+      content,
+      markdown,
+      html,
+      success: true
+    };
+    
+  } catch (error) {
+    return {
+      url,
+      title: '',
+      content: '',
+      markdown: '',
+      html: '',
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+}
+
+async function extractDataWithLLM(url: string, prompt: string, schema?: any): Promise<ExtractedData> {
+  try {
+    // First scrape the webpage
+    const scraped = await scrapeWebpage(url, true);
+    if (!scraped.success) {
+      return {
+        url,
+        data: null,
+        success: false,
+        error: scraped.error
+      };
+    }
+    
+    // Get LLM configuration
+    const LLM_API_KEY = CONFIG.llm.apiKey;
+    const LLM_PROVIDER_BASE_URL = CONFIG.llm.providerBaseUrl;
+    const LLM_MODEL = CONFIG.llm.model;
+    
+    if (!LLM_API_KEY || !LLM_PROVIDER_BASE_URL || !LLM_MODEL) {
+      return {
+        url,
+        data: null,
+        success: false,
+        error: 'LLM configuration not available'
+      };
+    }
+    
+    // Prepare the extraction prompt
+    const extractionPrompt = `
+You are a data extraction assistant. Extract information from the following webpage content based on the user's request.
+
+Webpage URL: ${url}
+Webpage Title: ${scraped.title}
+
+Content:
+${scraped.content}
+
+${schema ? `Extract data according to this JSON schema: ${JSON.stringify(schema, null, 2)}` : ''}
+
+User Request: ${prompt}
+
+Please provide the extracted data in JSON format. ${schema ? 'Ensure the response matches the provided schema.' : 'Structure the data logically based on the content and request.'}
+`;
+    
+    // Get proxy configuration for LLM API calls
+    const proxyUrl = CONFIG.proxy.url;
+    const proxyUsername = CONFIG.proxy.username;
+    const proxyPassword = CONFIG.proxy.password;
+    
+    // Build axios configuration
+    const axiosConfig: any = {
+      headers: {
+        'Authorization': `Bearer ${LLM_API_KEY}`,
+        'Content-Type': 'application/json'
       }
-    | {
-        type: 'news';
+    };
+    
+    // Add proxy configuration if available
+    if (proxyUrl) {
+      const proxyConfig: any = {
+        host: proxyUrl.replace(/^https?:\/\//, '').split(':')[0],
+        port: parseInt(proxyUrl.split(':').pop() || '80'),
+        protocol: proxyUrl.startsWith('https') ? 'https' : 'http'
+      };
+      
+      if (proxyUsername && proxyPassword) {
+        proxyConfig.auth = {
+          username: proxyUsername,
+          password: proxyPassword
+        };
       }
-  >;
-}
-
-// Add after other interfaces
-interface ExtractParams<T = any> {
-  prompt?: string;
-  schema?: T | object;
-  allowExternalLinks?: boolean;
-  enableWebSearch?: boolean;
-  includeSubdomains?: boolean;
-  origin?: string;
-}
-
-interface ExtractArgs {
-  urls: string[];
-  prompt?: string;
-  schema?: object;
-  allowExternalLinks?: boolean;
-  enableWebSearch?: boolean;
-  includeSubdomains?: boolean;
-  origin?: string;
-}
-
-interface ExtractResponse<T = any> {
-  success: boolean;
-  data: T;
-  error?: string;
-  warning?: string;
-  creditsUsed?: number;
+      
+      axiosConfig.proxy = proxyConfig;
+      console.error(`Using proxy for LLM API: ${proxyUrl}`);
+    }
+    
+    // Call LLM API
+    const response = await axios.post(`${LLM_PROVIDER_BASE_URL}/chat/completions`, {
+      model: LLM_MODEL,
+      messages: [
+        {
+          role: 'user',
+          content: extractionPrompt
+        }
+      ],
+      temperature: 0.1,
+      max_tokens: 2000
+    }, axiosConfig);
+    
+    const llmResponse = response.data.choices[0].message.content;
+    
+    // Try to parse JSON from the response
+    try {
+      const extractedData = JSON.parse(llmResponse);
+      return {
+        url,
+        data: extractedData,
+        success: true
+      };
+    } catch (parseError) {
+      // If JSON parsing fails, return the raw response
+      return {
+        url,
+        data: { raw_response: llmResponse },
+        success: true
+      };
+    }
+    
+  } catch (error) {
+    return {
+      url,
+      data: null,
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
 }
 
 // Type guards
-function isScrapeOptions(
-  args: unknown
-): args is ScrapeOptions & { url: string } {
+function isScrapeOptions(args: unknown): args is { url: string; onlyMainContent?: boolean } {
   return (
     typeof args === 'object' &&
     args !== null &&
@@ -237,71 +446,27 @@ function isScrapeOptions(
   );
 }
 
-function isMapOptions(args: unknown): args is MapOptions & { url: string } {
+function isBatchScrapeOptions(args: unknown): args is { urls: string[]; onlyMainContent?: boolean } {
   return (
     typeof args === 'object' &&
     args !== null &&
-    'url' in args &&
-    typeof (args as { url: unknown }).url === 'string'
+    'urls' in args &&
+    Array.isArray((args as { urls: unknown }).urls)
   );
 }
 
-//@ts-expect-error todo: fix
-function isCrawlOptions(args: unknown): args is CrawlOptions & { url: string } {
+function isExtractOptions(args: unknown): args is { urls: string[]; prompt: string; schema?: any; enableWebSearch?: boolean } {
   return (
     typeof args === 'object' &&
     args !== null &&
-    'url' in args &&
-    typeof (args as { url: unknown }).url === 'string'
+    'urls' in args &&
+    'prompt' in args &&
+    Array.isArray((args as { urls: unknown }).urls) &&
+    typeof (args as { prompt: unknown }).prompt === 'string'
   );
 }
 
-function isStatusCheckOptions(args: unknown): args is StatusCheckOptions {
-  return (
-    typeof args === 'object' &&
-    args !== null &&
-    'id' in args &&
-    typeof (args as { id: unknown }).id === 'string'
-  );
-}
-
-function isSearchOptions(args: unknown): args is SearchOptions {
-  return (
-    typeof args === 'object' &&
-    args !== null &&
-    'query' in args &&
-    typeof (args as { query: unknown }).query === 'string'
-  );
-}
-
-function isExtractOptions(args: unknown): args is ExtractArgs {
-  if (typeof args !== 'object' || args === null) return false;
-  const { urls } = args as { urls?: unknown };
-  return (
-    Array.isArray(urls) &&
-    urls.every((url): url is string => typeof url === 'string')
-  );
-}
-
-function removeEmptyTopLevel<T extends Record<string, any>>(
-  obj: T
-): Partial<T> {
-  const out: Partial<T> = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (v == null) continue;
-    if (typeof v === 'string' && v.trim() === '') continue;
-    if (Array.isArray(v) && v.length === 0) continue;
-    if (
-      typeof v === 'object' &&
-      !Array.isArray(v) &&
-      Object.keys(v).length === 0
-    )
-      continue;
-    // @ts-expect-error dynamic assignment
-    out[k] = v;
-  }
-  return out;
-}
+// Remove all complex tools - keep only essential ones above
 
 // Server implementation
 const server = new Server(
@@ -316,37 +481,39 @@ const server = new Server(
   }
 );
 
-// Get optional API URL
-const FIRECRAWL_API_URL = process.env.FIRECRAWL_API_URL;
-const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
-
-// Check if API key is required (not needed for cloud service)
-if (process.env.CLOUD_SERVICE !== 'true' && !FIRECRAWL_API_KEY) {
-  console.error('Error: FIRECRAWL_API_KEY environment variable is required');
-  process.exit(1);
-}
-
-// Initialize Firecrawl client with optional API URL
-const client = new FirecrawlApp({
-  apiKey: FIRECRAWL_API_KEY || 'dummy', // Dummy key for local instance
-  ...(FIRECRAWL_API_URL ? { apiUrl: FIRECRAWL_API_URL } : {}),
-});
-
 // Configuration for retries and monitoring
 const CONFIG = {
-  retry: {
-    maxAttempts: Number(process.env.FIRECRAWL_RETRY_MAX_ATTEMPTS) || 3,
-    initialDelay: Number(process.env.FIRECRAWL_RETRY_INITIAL_DELAY) || 1000,
-    maxDelay: Number(process.env.FIRECRAWL_RETRY_MAX_DELAY) || 10000,
-    backoffFactor: Number(process.env.FIRECRAWL_RETRY_BACKOFF_FACTOR) || 2,
+  scraping: {
+    userAgent: process.env.SCRAPE_USER_AGENT || DEFAULT_USER_AGENT,
+    viewportWidth: Number(process.env.SCRAPE_VIEWPORT_WIDTH) || DEFAULT_VIEWPORT_WIDTH,
+    viewportHeight: Number(process.env.SCRAPE_VIEWPORT_HEIGHT) || DEFAULT_VIEWPORT_HEIGHT,
+    delayMin: Number(process.env.SCRAPE_DELAY_MIN) || DEFAULT_SCRAPE_DELAY_MIN,
+    delayMax: Number(process.env.SCRAPE_DELAY_MAX) || DEFAULT_SCRAPE_DELAY_MAX,
+    batchDelayMin: Number(process.env.SCRAPE_BATCH_DELAY_MIN) || DEFAULT_BATCH_DELAY_MIN,
+    batchDelayMax: Number(process.env.SCRAPE_BATCH_DELAY_MAX) || DEFAULT_BATCH_DELAY_MAX,
   },
-  credit: {
-    warningThreshold:
-      Number(process.env.FIRECRAWL_CREDIT_WARNING_THRESHOLD) || 1000,
-    criticalThreshold:
-      Number(process.env.FIRECRAWL_CREDIT_CRITICAL_THRESHOLD) || 100,
+  retry: {
+    maxAttempts: Number(process.env.FIRECRAWL_RETRY_MAX_ATTEMPTS) || DEFAULT_RETRY_ATTEMPTS,
+    initialDelay: Number(process.env.FIRECRAWL_RETRY_INITIAL_DELAY) || DEFAULT_RETRY_INITIAL_DELAY,
+    maxDelay: Number(process.env.FIRECRAWL_RETRY_MAX_DELAY) || DEFAULT_RETRY_MAX_DELAY,
+    backoffFactor: Number(process.env.FIRECRAWL_RETRY_BACKOFF_FACTOR) || DEFAULT_RETRY_BACKOFF_FACTOR,
+  },
+  llm: {
+    apiKey: process.env.LLM_API_KEY,
+    providerBaseUrl: process.env.LLM_PROVIDER_BASE_URL,
+    model: process.env.LLM_MODEL,
+  },
+  proxy: {
+    url: process.env.PROXY_SERVER_URL,
+    username: process.env.PROXY_SERVER_USERNAME,
+    password: process.env.PROXY_SERVER_PASSWORD,
   },
 };
+
+// Get LLM configuration
+const LLM_API_KEY = CONFIG.llm.apiKey;
+const LLM_PROVIDER_BASE_URL = CONFIG.llm.providerBaseUrl;
+const LLM_MODEL = CONFIG.llm.model;
 
 // Add utility function for delay
 function delay(ms: number): Promise<void> {
@@ -378,39 +545,6 @@ function safeLog(
   }
 }
 
-// Add retry logic with exponential backoff
-async function withRetry<T>(
-  operation: () => Promise<T>,
-  context: string,
-  attempt = 1
-): Promise<T> {
-  try {
-    return await operation();
-  } catch (error) {
-    const isRateLimit =
-      error instanceof Error &&
-      (error.message.includes('rate limit') || error.message.includes('429'));
-
-    if (isRateLimit && attempt < CONFIG.retry.maxAttempts) {
-      const delayMs = Math.min(
-        CONFIG.retry.initialDelay *
-          Math.pow(CONFIG.retry.backoffFactor, attempt - 1),
-        CONFIG.retry.maxDelay
-      );
-
-      safeLog(
-        'warning',
-        `Rate limit hit for ${context}. Attempt ${attempt}/${CONFIG.retry.maxAttempts}. Retrying in ${delayMs}ms`
-      );
-
-      await delay(delayMs);
-      return withRetry(operation, context, attempt + 1);
-    }
-
-    throw error;
-  }
-}
-
 // Tool handlers
 server.setRequestHandler(
   ListToolsRequestSchema,
@@ -432,18 +566,7 @@ server.setRequestHandler(
     const startTime = Date.now();
     try {
       const { name, arguments: args } = request.params;
-      const apiKey =
-        process.env.CLOUD_SERVICE === 'true'
-          ? (request.params._meta?.apiKey as string)
-          : FIRECRAWL_API_KEY;
-      if (process.env.CLOUD_SERVICE === 'true' && !apiKey) {
-        throw new Error('No API key provided');
-      }
-
-      const client = new FirecrawlApp({
-        apiKey,
-        ...(FIRECRAWL_API_URL ? { apiUrl: FIRECRAWL_API_URL } : {}),
-      });
+      
       // Log incoming request with timestamp
       safeLog(
         'info',
@@ -459,33 +582,28 @@ server.setRequestHandler(
           if (!isScrapeOptions(args)) {
             throw new Error('Invalid arguments for scrape_page');
           }
-          const options: ScrapeOptions = {
-            formats: ['markdown'],
-            onlyMainContent: args.onlyMainContent !== false,
-          };
-          const response = await client.scrape(args.url, options);
+          
+          const result = await scrapeWebpage(args.url, args.onlyMainContent !== false);
           return {
-            content: [{ type: 'text', text: response.markdown || response.html || 'No content found' }],
-            isError: false,
+            content: [{ type: 'text', text: result.success ? result.markdown : `Error: ${result.error}` }],
+            isError: !result.success,
           };
         }
 
         case 'batch_scrape': {
-          if (!Array.isArray(args.urls) || args.urls.length === 0) {
+          if (!isBatchScrapeOptions(args)) {
             throw new Error('Invalid arguments for batch_scrape: urls array required');
           }
-          const options: ScrapeOptions = {
-            formats: ['markdown'],
-            onlyMainContent: args.onlyMainContent !== false,
-          };
+          
           const results = [];
           for (const url of args.urls) {
             try {
-              const response = await client.scrape(url, options);
+              const result = await scrapeWebpage(url, args.onlyMainContent !== false);
               results.push({
                 url,
-                success: true,
-                content: response.markdown || response.html || 'No content found'
+                success: result.success,
+                title: result.title,
+                content: result.success ? result.markdown : `Error: ${result.error}`
               });
             } catch (error) {
               results.push({
@@ -494,8 +612,9 @@ server.setRequestHandler(
                 error: error instanceof Error ? error.message : String(error)
               });
             }
-            // Add small delay to prevent overwhelming the API
-            await delay(200);
+            // Add random delay between requests to avoid rate limiting
+            const batchDelay = Math.floor(Math.random() * (CONFIG.scraping.batchDelayMax - CONFIG.scraping.batchDelayMin)) + CONFIG.scraping.batchDelayMin;
+            await delay(batchDelay);
           }
           return {
             content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
@@ -504,32 +623,63 @@ server.setRequestHandler(
         }
 
         case 'extract_data': {
-          if (!Array.isArray(args.urls) || args.urls.length === 0 || !args.prompt) {
+          if (!isExtractOptions(args)) {
             throw new Error('Invalid arguments for extract_data: urls array and prompt required');
           }
-          const response = await client.extract({
-            urls: args.urls,
-            prompt: args.prompt as string,
-            enableWebSearch: args.enableWebSearch as boolean || false,
-          });
+
+          const results = [];
+          for (const url of args.urls) {
+            try {
+              const result = await extractDataWithLLM(url, args.prompt);
+              results.push({
+                url,
+                success: result.success,
+                data: result.success ? result.data : `Error: ${result.error}`
+              });
+            } catch (error) {
+              results.push({
+                url,
+                success: false,
+                error: error instanceof Error ? error.message : String(error)
+              });
+            }
+            // Add delay between requests
+            await delay(1000);
+          }
+          
           return {
-            content: [{ type: 'text', text: JSON.stringify(response, null, 2) }],
+            content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
             isError: false,
           };
         }
 
         case 'extract_with_schema': {
-          if (!Array.isArray(args.urls) || args.urls.length === 0 || !args.schema) {
-            throw new Error('Invalid arguments for extract_with_schema: urls array and schema required');
+          if (!isExtractOptions(args) || !args.schema) {
+            throw new Error('Invalid arguments for extract_with_schema: urls array, schema, and prompt required');
           }
-          const response = await client.extract({
-            urls: args.urls,
-            schema: args.schema as Record<string, unknown>,
-            prompt: args.prompt as string,
-            enableWebSearch: args.enableWebSearch as boolean || false,
-          });
+
+          const results = [];
+          for (const url of args.urls) {
+            try {
+              const result = await extractDataWithLLM(url, args.prompt || 'Extract data according to the provided schema', args.schema);
+              results.push({
+                url,
+                success: result.success,
+                data: result.success ? result.data : `Error: ${result.error}`
+              });
+            } catch (error) {
+              results.push({
+                url,
+                success: false,
+                error: error instanceof Error ? error.message : String(error)
+              });
+            }
+            // Add delay between requests
+            await delay(1000);
+          }
+          
           return {
-            content: [{ type: 'text', text: JSON.stringify(response, null, 2) }],
+            content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
             isError: false,
           };
         }
@@ -570,12 +720,12 @@ server.setRequestHandler(
 );
 
 // Helper function to format results
-function formatResults(data: Document[]): string {
+function formatResults(data: ScrapedContent[]): string {
   return data
     .map((doc) => {
-      const content = doc.markdown || doc.html || doc.rawHtml || 'No content';
-      return `Content: ${content.substring(0, 100)}${content.length > 100 ? '...' : ''}
-${doc.metadata?.title ? `Title: ${doc.metadata.title}` : ''}`;
+      const content = doc.markdown || doc.content || 'No content';
+      return `Title: ${doc.title}
+Content: ${content.substring(0, 100)}${content.length > 100 ? '...' : ''}`;
     })
     .join('\n\n');
 }
@@ -607,7 +757,7 @@ async function runLocalServer() {
     safeLog('info', 'Firecrawl Lite MCP Server initialized successfully');
     safeLog(
       'info',
-      `Configuration: API URL: ${FIRECRAWL_API_URL || 'default'}`
+      `LLM Configuration: ${LLM_PROVIDER_BASE_URL ? 'Configured' : 'Not configured'} (${LLM_MODEL || 'no model'})`
     );
 
     console.error('Firecrawl Lite MCP Server running on stdio');
@@ -651,6 +801,16 @@ async function runSSELocalServer() {
 async function runHTTPStreamableServer() {
   const app = express();
   app.use(express.json());
+
+  // Health check endpoint
+  app.get('/health', (req, res) => {
+    res.status(200).json({
+      status: 'OK',
+      server: 'Firecrawl Lite MCP Server',
+      version: '1.0.0',
+      timestamp: new Date().toISOString()
+    });
+  });
 
   const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
 
@@ -743,35 +903,8 @@ async function runHTTPStreamableServer() {
     });
   });
 }
-// Old runSSECloudServer function removed - now using versioned server
-
-if (process.env.CLOUD_SERVICE === 'true') {
-  // Use versioned server for cloud service
-  import('./versioned-server.js')
-    .then(({ runVersionedSSECloudServer }) => {
-      runVersionedSSECloudServer().catch((error: any) => {
-        console.error('Fatal error running versioned server:', error);
-        process.exit(1);
-      });
-    })
-    .catch((error: any) => {
-      console.error('Fatal error importing versioned server:', error);
-      process.exit(1);
-    });
-} else if (process.env.SSE_LOCAL === 'true') {
-  runSSELocalServer().catch((error: any) => {
-    console.error('Fatal error running server:', error);
-    process.exit(1);
-  });
-} else if (process.env.HTTP_STREAMABLE_SERVER === 'true') {
-  console.log('Running HTTP Streamable Server');
-  runHTTPStreamableServer().catch((error: any) => {
-    console.error('Fatal error running server:', error);
-    process.exit(1);
-  });
-} else {
-  runLocalServer().catch((error: any) => {
-    console.error('Fatal error running server:', error);
-    process.exit(1);
-  });
-}
+// Server startup - standalone MCP server
+runLocalServer().catch((error: any) => {
+  console.error('Fatal error running server:', error);
+  process.exit(1);
+});
