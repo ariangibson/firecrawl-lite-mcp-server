@@ -27,13 +27,16 @@ A **privacy-first, standalone** MCP server that provides web scraping and data e
 
 This project is inspired by and builds upon the excellent work of the original Firecrawl projects:
 
-### 🔥 **[Firecrawl](https://github.com/firecrawl/firecrawl)**
+### 🔥 **[Firecrawl](https://firecrawl.com)**
 The original Firecrawl project by **Mendable.ai** - a comprehensive web scraping and crawling platform with advanced features like website mapping, multi-page crawling, and deep research capabilities.
 
 ### 🔥 **[Firecrawl MCP Server](https://github.com/firecrawl/firecrawl-mcp-server)**
 The official MCP server implementation by the Firecrawl team, providing MCP integration for their cloud-based scraping service.
 
 **We give huge thanks to the Firecrawl team for their pioneering work in web scraping and MCP integration!** 🚀
+
+> **💡 Looking for a very generous free tier and dead-simple cloud-hosted solution?**  
+> Visit **[firecrawl.com](https://firecrawl.com)** and sign up for a Firecrawl account! Their cloud service offers enterprise-grade web scraping with zero setup complexity.
 
 ## 🎯 **How Firecrawl Lite is Different**
 
