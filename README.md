@@ -69,8 +69,10 @@ This standalone version provides local web scraping and data extraction using Pu
 
 ### **1. Install the package:**
 ```bash
-npm install -g firecrawl-lite-mcp-server
+npm install -g @ariangibson/firecrawl-lite-mcp-server
 ```
+
+Or use npx to run without global installation (recommended).
 
 ### **2. Configure your LLM:**
 ```bash
@@ -88,7 +90,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "firecrawl-lite": {
-      "command": "firecrawl-lite-mcp-server",
+      "command": "npx",
+      "args": ["-y", "@ariangibson/firecrawl-lite-mcp-server"],
       "env": {
         "LLM_API_KEY": "your_llm_api_key_here",
         "LLM_PROVIDER_BASE_URL": "https://api.x.ai/v1",
@@ -102,7 +105,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 #### **Claude Code (CLI)**
 ```bash
 claude config mcp add firecrawl-lite \
-  --command "firecrawl-lite-mcp-server" \
+  --command "npx" \
+  --args "-y" --args "@ariangibson/firecrawl-lite-mcp-server" \
   --env LLM_API_KEY=your_llm_api_key_here \
   --env LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 \
   --env LLM_MODEL=grok-code-fast-1
