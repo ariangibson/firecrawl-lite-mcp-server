@@ -86,12 +86,30 @@ LLM_MODEL=grok-code-fast-1
 
 #### **Claude Desktop**
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+**Option 1: Using npx (recommended)**
 ```json
 {
   "mcpServers": {
     "firecrawl-lite": {
       "command": "npx",
       "args": ["-y", "@ariangibson/firecrawl-lite-mcp-server"],
+      "env": {
+        "LLM_API_KEY": "your_llm_api_key_here",
+        "LLM_PROVIDER_BASE_URL": "https://api.x.ai/v1",
+        "LLM_MODEL": "grok-code-fast-1"
+      }
+    }
+  }
+}
+```
+
+**Option 2: Using global installation (fallback for LM Studio)**
+```json
+{
+  "mcpServers": {
+    "firecrawl-lite": {
+      "command": "firecrawl-lite-mcp-server",
       "env": {
         "LLM_API_KEY": "your_llm_api_key_here",
         "LLM_PROVIDER_BASE_URL": "https://api.x.ai/v1",
