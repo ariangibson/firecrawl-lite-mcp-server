@@ -241,7 +241,8 @@ async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Prom
       
       // If proxy requires authentication, we'll handle it in the page setup
       if (proxyUsername && proxyPassword) {
-        console.error(`Using authenticated proxy: ${proxyUrl}`);
+        // SECURITY: Never log proxy URLs that might contain credentials
+        console.error(`Using authenticated proxy: [REDACTED]`);
       } else {
         console.error(`Using proxy: ${proxyUrl}`);
       }
@@ -453,7 +454,8 @@ Please provide the extracted data in JSON format. ${schema ? 'Ensure the respons
       }
       
       axiosConfig.proxy = proxyConfig;
-      console.error(`Using proxy for LLM API: ${proxyUrl}`);
+      // SECURITY: Never log proxy URLs that might contain credentials
+      console.error(`Using proxy for LLM API: [REDACTED]`);
     }
     
     // Call LLM API with timeout for security
@@ -1063,8 +1065,17 @@ async function runHTTPStreamableServer() {
     });
   });
 }
-// Server startup - standalone MCP server
-runLocalServer().catch((error: any) => {
-  console.error('Fatal error running server:', error);
-  process.exit(1);
-});
+// Server startup - conditional based on environment
+if (process.env.HTTP_STREAMABLE_SERVER === 'true') {
+  console.error('Starting HTTP Streamable MCP Server...');
+  runHTTPStreamableServer().catch((error: any) => {
+    console.error('Fatal error running HTTP server:', error);
+    process.exit(1);
+  });
+} else {
+  console.error('Starting stdio MCP Server...');
+  runLocalServer().catch((error: any) => {
+    console.error('Fatal error running server:', error);
+    process.exit(1);
+  });
+}

@@ -67,27 +67,14 @@ This standalone version provides local web scraping and data extraction using Pu
 
 ## 🚀 **Quick Start**
 
-### **1. Install the package:**
-```bash
-npm install -g @ariangibson/firecrawl-lite-mcp-server
-```
+### **1. No Installation Required!**
+This MCP server runs via `npx` - no global installation needed.
 
-Or use npx to run without global installation (recommended).
-
-### **2. Configure your LLM:**
-```bash
-# Create a .env file or set environment variables
-LLM_API_KEY=your_llm_api_key_here
-LLM_PROVIDER_BASE_URL=https://api.x.ai/v1
-LLM_MODEL=grok-code-fast-1
-```
-
-### **3. Configure your MCP client:**
+### **2. Configure your MCP client:**
 
 #### **Claude Desktop**
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
-**Option 1: Using npx (recommended)**
 ```json
 {
   "mcpServers": {
@@ -104,21 +91,12 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-**Option 2: Using global installation (fallback for LM Studio)**
-```json
-{
-  "mcpServers": {
-    "firecrawl-lite": {
-      "command": "firecrawl-lite-mcp-server",
-      "env": {
-        "LLM_API_KEY": "your_llm_api_key_here",
-        "LLM_PROVIDER_BASE_URL": "https://api.x.ai/v1",
-        "LLM_MODEL": "grok-code-fast-1"
-      }
-    }
-  }
-}
+#### **LM Studio**
+If npx doesn't work with LM Studio, you can globally install first:
+```bash
+npm install -g @ariangibson/firecrawl-lite-mcp-server
 ```
+Then use `"command": "firecrawl-lite-mcp-server"` without npx.
 
 #### **Claude Code (CLI)**
 ```bash
@@ -130,7 +108,7 @@ claude config mcp add firecrawl-lite \
   --env LLM_MODEL=grok-code-fast-1
 ```
 
-### **4. Restart your MCP client and start scraping!**
+### **3. Restart your MCP client and start scraping!**
 
 ## ⚙️ **Configuration Guide**
 

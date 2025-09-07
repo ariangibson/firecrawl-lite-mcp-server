@@ -1,5 +1,5 @@
 # MCP server Dockerfile with Puppeteer support
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Install Chromium and dependencies for Puppeteer
 RUN apk add --no-cache \
@@ -20,14 +20,17 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including dev) for build
+RUN npm ci
 
 # Copy source code
 COPY . .
 
 # Build the application
 RUN npm run build
+
+# Remove dev dependencies after build
+RUN npm prune --production
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs

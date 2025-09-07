@@ -26,4 +26,8 @@ v1.2.md
 
 # OS
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Sensitive documentation files
+GITHUB_RESPONSE_GUIDE.md
+TESTING.md 
