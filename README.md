@@ -204,17 +204,39 @@ SCRAPE_BATCH_DELAY_MIN=2000 # Minimum delay between batch requests
 SCRAPE_BATCH_DELAY_MAX=5000 # Maximum delay between batch requests
 ```
 
-## � **Docker Deployment (Optional)**
+## 🐳 **Docker Deployment**
 
-If you prefer Docker deployment:
+### **Option 1: Pre-built Image (Recommended)**
+Perfect for production, Docker Swarm, and Kubernetes deployments:
 
 ```bash
-# Build and run with Docker
-docker-compose up --build
+# Pull and run the latest image
+docker-compose up -d
 
-# Run in background
-docker-compose up -d --build
+# Or run directly with Docker
+docker run -d \
+  -p 3000:3000 \
+  -e LLM_API_KEY=your_key_here \
+  -e LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 \
+  -e LLM_MODEL=grok-code-fast-1 \
+  ariangibson/firecrawl-lite-mcp-server:latest
 ```
+
+### **Option 2: Build from Source**
+For development or customization:
+
+```bash
+# Edit docker-compose.yml to uncomment the build section
+# Then build and run
+docker-compose up --build -d
+```
+
+### **Docker Hub Repository**
+Pre-built images are automatically published to: **[ariangibson/firecrawl-lite-mcp-server](https://hub.docker.com/r/ariangibson/firecrawl-lite-mcp-server)**
+
+- **Multi-architecture support**: `linux/amd64`, `linux/arm64`
+- **Automatic updates**: Built on every release
+- **Tagged versions**: `latest`, `v1.1.2`, etc.
 
 The server will be available at `http://localhost:3000` with a health endpoint at `http://localhost:3000/health`.
 

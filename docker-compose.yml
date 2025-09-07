@@ -2,9 +2,13 @@ version: '3.8'
 
 services:
   mcp-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # Option 1: Use pre-built image (recommended for production and Docker Swarm)
+    image: ariangibson/firecrawl-lite-mcp-server:latest
+    
+    # Option 2: Build locally (uncomment to build from source)
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     ports:
       - "3000:3000"
     environment:
