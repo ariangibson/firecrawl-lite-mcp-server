@@ -232,7 +232,7 @@ const SCREENSHOT_TOOL: Tool = {
 // Lightweight tool definitions for essential Firecrawl functionality
 
 // Local web scraping functions
-async function screenshotWebpage(url: string, width: number = 1920, height: number = 1080, fullPage: boolean = false): Promise<{ success: boolean; imagePath?: string; error?: string; }> {
+async function screenshotWebpage(url: string, width: number = 1920, height: number = 1080, fullPage: boolean = false): Promise<{ success: boolean; dataUrl?: string; base64?: string; metadata?: any; error?: string; }> {
   // Initialize puppeteer modules
   await initializePuppeteer();
   
@@ -358,33 +358,32 @@ async function screenshotWebpage(url: string, width: number = 1920, height: numb
     // Final wait for any dynamic content
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Create local tmp directory if it doesn't exist
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    const tmpDir = path.join(process.cwd(), 'tmp');
-    
-    try {
-      await fs.mkdir(tmpDir, { recursive: true });
-    } catch (error) {
-      // Directory might already exist, ignore error
-    }
-    
-    // Generate unique filename
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const domain = new URL(sanitizedUrl).hostname.replace(/[^a-zA-Z0-9]/g, '-');
-    const filename = `screenshot-${domain}-${timestamp}.png`;
-    const imagePath = path.join(tmpDir, filename);
-    
-    // Take the screenshot
-    await page.screenshot({ 
-      path: imagePath,
+    // Take screenshot and return as base64 for remote deployment compatibility
+    const screenshotBuffer = await page.screenshot({ 
       fullPage,
       type: 'png'
     });
     
+    // Convert buffer to base64
+    const base64Data = screenshotBuffer.toString('base64');
+    const dataUrl = `data:image/png;base64,${base64Data}`;
+    
+    // Get metadata about the image
+    const fileSizeKB = Math.round(screenshotBuffer.length / 1024);
+    const timestamp = new Date().toISOString();
+    
     return {
       success: true,
-      imagePath
+      dataUrl,
+      base64: base64Data,
+      metadata: {
+        format: 'png',
+        sizeKB: fileSizeKB,
+        dimensions: `${width}x${height}`,
+        fullPage,
+        timestamp,
+        url: sanitizedUrl
+      }
     };
     
   } catch (error) {
@@ -1030,11 +1029,11 @@ server.setRequestHandler(
             args.fullPage || false
           );
           
-          if (result.success && result.imagePath) {
+          if (result.success && result.dataUrl) {
             return {
               content: [{ 
                 type: 'text', 
-                text: `Screenshot saved successfully: ${result.imagePath}` 
+                text: `Screenshot captured successfully!\n\nMetadata:\n- Format: ${result.metadata?.format}\n- Size: ${result.metadata?.sizeKB}KB\n- Dimensions: ${result.metadata?.dimensions}\n- Full Page: ${result.metadata?.fullPage}\n- URL: ${result.metadata?.url}\n- Timestamp: ${result.metadata?.timestamp}\n\nBase64 Data URL:\n${result.dataUrl}` 
               }],
               isError: false,
             };
