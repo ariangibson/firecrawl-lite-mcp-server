@@ -925,6 +925,10 @@ const CONFIG = {
     username: process.env.PROXY_SERVER_USERNAME,
     password: process.env.PROXY_SERVER_PASSWORD,
   },
+  endpoints: {
+    enableMcpEndpoint: process.env.ENABLE_MCP_ENDPOINT !== 'false', // Default enabled
+    enableSseEndpoint: process.env.ENABLE_SSE_ENDPOINT === 'true',   // Default disabled  
+  },
 };
 
 // Get LLM configuration
@@ -1287,38 +1291,6 @@ async function runLocalServer() {
     process.exit(1);
   }
 }
-async function runSSELocalServer() {
-  let transport: SSEServerTransport | null = null;
-  const app = express();
-
-  app.get('/sse', async (_req, res) => {
-    transport = new SSEServerTransport(`/messages`, res);
-    res.on('close', () => {
-      transport = null;
-    });
-    await server.connect(transport);
-  });
-
-  // Endpoint for the client to POST messages
-  // Remove express.json() middleware - let the transport handle the body
-  app.post('/messages', (req, res) => {
-    if (transport) {
-      transport.handlePostMessage(req, res);
-    }
-  });
-
-  const PORT = process.env.PORT || 3000;
-  console.log('Starting server on port', PORT);
-  try {
-    app.listen(PORT, () => {
-      console.log(`MCP SSE Server listening on http://localhost:${PORT}`);
-      console.log(`SSE endpoint: http://localhost:${PORT}/sse`);
-      console.log(`Message endpoint: http://localhost:${PORT}/messages`);
-    });
-  } catch (error) {
-    console.error('Error starting server:', error);
-  }
-}
 async function runHTTPStreamableServer() {
   const app = express();
   app.use(express.json());
@@ -1328,15 +1300,21 @@ async function runHTTPStreamableServer() {
     res.status(200).json({
       status: 'OK',
       server: 'Firecrawl Lite MCP Server',
-      version: '1.0.0',
-      timestamp: new Date().toISOString()
+      version: '1.1.2',
+      timestamp: new Date().toISOString(),
+      endpoints: {
+        mcp: CONFIG.endpoints.enableMcpEndpoint ? 'enabled' : 'disabled',
+        sse: CONFIG.endpoints.enableSseEndpoint ? 'enabled' : 'disabled'
+      }
     });
   });
 
   const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+  let sseTransport: SSEServerTransport | null = null;
 
-  // A single endpoint handles all MCP requests.
-  app.all('/mcp', async (req: Request, res: Response) => {
+  // MCP endpoint - only if enabled
+  if (CONFIG.endpoints.enableMcpEndpoint) {
+    app.all('/mcp', async (req: Request, res: Response) => {
     try {
       const sessionId = req.headers['mcp-session-id'] as string | undefined;
       let transport: StreamableHTTPServerTransport;
@@ -1397,27 +1375,71 @@ async function runHTTPStreamableServer() {
         });
       }
     }
-  });
+    });
+  }
+
+  // SSE endpoint - only if enabled  
+  if (CONFIG.endpoints.enableSseEndpoint) {
+    app.get('/sse', async (_req, res) => {
+      sseTransport = new SSEServerTransport(`/messages`, res);
+      res.on('close', () => {
+        sseTransport = null;
+      });
+      await server.connect(sseTransport);
+    });
+
+    app.post('/messages', (req, res) => {
+      if (sseTransport) {
+        sseTransport.handlePostMessage(req, res);
+      } else {
+        res.status(503).json({
+          error: 'SSE transport not available. Connect to /sse first.'
+        });
+      }
+    });
+  }
 
   const PORT = 3000;
   const appServer = app.listen(PORT, () => {
-    console.log(`MCP Streamable HTTP Server listening on port ${PORT}`);
+    console.log(`🚀 Firecrawl Lite MCP Server listening on port ${PORT}`);
+    console.log(`📊 Health endpoint: http://localhost:${PORT}/health`);
+    if (CONFIG.endpoints.enableMcpEndpoint) {
+      console.log(`🔌 MCP endpoint: http://localhost:${PORT}/mcp`);
+    }
+    if (CONFIG.endpoints.enableSseEndpoint) {
+      console.log(`📡 SSE endpoint: http://localhost:${PORT}/sse`);
+      console.log(`💬 Messages endpoint: http://localhost:${PORT}/messages`);
+    }
   });
 
   process.on('SIGINT', async () => {
     console.log('Shutting down server...');
+    
+    // Close MCP transports
     for (const sessionId in transports) {
       try {
-        console.log(`Closing transport for session ${sessionId}`);
+        console.log(`Closing MCP transport for session ${sessionId}`);
         await transports[sessionId].close();
         delete transports[sessionId];
       } catch (error) {
         console.error(
-          `Error closing transport for session ${sessionId}:`,
+          `Error closing MCP transport for session ${sessionId}:`,
           error
         );
       }
     }
+
+    // Close SSE transport if active
+    if (sseTransport) {
+      try {
+        console.log('Closing SSE transport');
+        await sseTransport.close();
+        sseTransport = null;
+      } catch (error) {
+        console.error('Error closing SSE transport:', error);
+      }
+    }
+    
     appServer.close(() => {
       console.log('Server shutdown complete');
       process.exit(0);
