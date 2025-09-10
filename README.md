@@ -209,12 +209,23 @@ For development or customization:
 docker-compose up --build -d
 ```
 
-### **Docker Hub Repository**
-Pre-built images are automatically published to: **[ariangibson/firecrawl-lite-mcp-server](https://hub.docker.com/r/ariangibson/firecrawl-lite-mcp-server)**
+### **Container Registries**
+Pre-built images are automatically published to both registries:
+
+**🐳 Docker Hub**: **[ariangibson/firecrawl-lite-mcp-server](https://hub.docker.com/r/ariangibson/firecrawl-lite-mcp-server)**
+```bash
+docker pull ariangibson/firecrawl-lite-mcp-server:latest
+```
+
+**📦 GitHub Container Registry**: **[ghcr.io/ariangibson/firecrawl-lite-mcp-server](https://github.com/ariangibson/firecrawl-lite-mcp-server/pkgs/container/firecrawl-lite-mcp-server)**
+```bash
+docker pull ghcr.io/ariangibson/firecrawl-lite-mcp-server:latest  
+```
 
 - **Multi-architecture support**: `linux/amd64`, `linux/arm64`
-- **Automatic updates**: Built on every release
+- **Automatic updates**: Built on every release and main branch push
 - **Tagged versions**: `latest`, `v1.1.2`, etc.
+- **Same image, multiple sources**: Choose your preferred registry
 
 The server will be available at `http://localhost:3000` with a health endpoint at `http://localhost:3000/health`.
 
