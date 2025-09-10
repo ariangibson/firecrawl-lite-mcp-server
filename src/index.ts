@@ -232,7 +232,37 @@ const SCREENSHOT_TOOL: Tool = {
 // Lightweight tool definitions for essential Firecrawl functionality
 
 // Local web scraping functions
+// Smart proxy failover wrapper for screenshots with 3-attempt retry logic
 async function screenshotWebpage(url: string, width: number = 1920, height: number = 1080, fullPage: boolean = false): Promise<{ success: boolean; dataUrl?: string; base64?: string; metadata?: any; error?: string; }> {
+  const maxAttempts = 3;
+  let lastError: Error | string | null = null;
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const result = await screenshotWebpageWithProxy(url, width, height, fullPage);
+      if (result.success) {
+        return result; // Success on this attempt
+      }
+      lastError = result.error || 'Unknown screenshot error';
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+    
+    // If we still have attempts left, continue to next proxy
+    if (attempt < maxAttempts) {
+      console.error(`Screenshot attempt ${attempt} failed for ${url}, trying next proxy...`);
+    }
+  }
+  
+  // All attempts failed
+  return {
+    success: false,
+    error: `Failed after ${maxAttempts} attempts. Last error: ${lastError}`
+  };
+}
+
+// Core screenshot function that uses a specific proxy from rotation
+async function screenshotWebpageWithProxy(url: string, width: number = 1920, height: number = 1080, fullPage: boolean = false): Promise<{ success: boolean; dataUrl?: string; base64?: string; metadata?: any; error?: string; }> {
   // Initialize puppeteer modules
   await initializePuppeteer();
   
@@ -398,7 +428,42 @@ async function screenshotWebpage(url: string, width: number = 1920, height: numb
   }
 }
 
+// Smart proxy failover wrapper with 3-attempt retry logic
 async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Promise<ScrapedContent> {
+  const maxAttempts = 3;
+  let lastError: Error | string | null = null;
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const result = await scrapeWebpageWithProxy(url, onlyMainContent);
+      if (result.success) {
+        return result; // Success on this attempt
+      }
+      lastError = result.error || 'Unknown scraping error';
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+    
+    // If we still have attempts left, continue to next proxy
+    if (attempt < maxAttempts) {
+      console.error(`Scrape attempt ${attempt} failed for ${url}, trying next proxy...`);
+    }
+  }
+  
+  // All attempts failed
+  return {
+    url,
+    title: '',
+    content: '',
+    markdown: '',
+    html: '',
+    success: false,
+    error: `Failed after ${maxAttempts} attempts. Last error: ${lastError}`
+  };
+}
+
+// Core scraping function that uses a specific proxy from rotation
+async function scrapeWebpageWithProxy(url: string, onlyMainContent: boolean = true): Promise<ScrapedContent> {
   // Initialize puppeteer modules
   await initializePuppeteer();
   

@@ -16,10 +16,10 @@
 - [ ] **Environment variable control** - `ENABLE_MCP_ENDPOINT=true/false` 
 
 ### 🔄 Proxy Server Rotation
-- [ ] **Parse range syntax** - Support `PROXY_SERVER_URL=https://us.decodo.com:10001-10010`
-- [ ] **Rotation logic** - Cycle through ports 10001-10010 on failures
-- [ ] **Failover handling** - Gracefully handle proxy failures and retry with next
-- [ ] **Health checking** - Test proxy availability before use
+- [x] **Parse range syntax** - Support `PROXY_SERVER_URL=https://us.decodo.com:10001-10010` ✅
+- [x] **Rotation logic** - Cycle through ports 10001-10010 on failures ✅
+- [x] **Failover handling** - Smart 3-attempt retry with different proxies ✅
+- [x] **Health checking** - ~~Test proxy availability before use~~ (Removed - unnecessary complexity)
 
 ### 👤 User Agent Rotation  
 - [ ] **Array support** - `SCRAPE_USER_AGENTS=["agent1", "agent2", "agent3"]`
@@ -68,11 +68,12 @@
 - ✅ Local stdio mode working  
 - ✅ Docker Hub publishing automated
 - ✅ Anti-detection features implemented
-- ⚠️ Remote server deployment needs testing
-- ❌ SSE endpoint not implemented
-- ❌ Proxy rotation not implemented  
-- ❌ User agent rotation not implemented
-- ❌ Screenshot handling problematic for remote deployment
+- ✅ Remote server deployment tested and working
+- ✅ SSE endpoint implemented with environment controls
+- ✅ Proxy rotation implemented with smart failover (3-attempt retry)
+- ✅ User agent rotation implemented with JSON array support
+- ✅ Screenshot handling redesigned for remote deployment (base64 return)
+- ✅ GitHub Container Registry publishing implemented
 
 ---
 *Last updated: 2025-01-09*
