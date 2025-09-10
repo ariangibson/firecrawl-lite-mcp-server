@@ -11,14 +11,23 @@ services:
     #   dockerfile: Dockerfile
     ports:
       - "3000:3000"
+    restart: unless-stopped
     environment:
-      - HTTP_STREAMABLE_SERVER=true
+      # Remote deployment endpoints (required for Docker deployment)
+      - ENABLE_HTTP_STREAMABLE_ENDPOINT=true
+      - ENABLE_SSE_ENDPOINT=${ENABLE_SSE_ENDPOINT:-false}
+      
+      # Required LLM configuration
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_PROVIDER_BASE_URL=${LLM_PROVIDER_BASE_URL}
       - LLM_MODEL=${LLM_MODEL}
+      
+      # Optional proxy configuration
       - PROXY_SERVER_URL=${PROXY_SERVER_URL}
       - PROXY_SERVER_USERNAME=${PROXY_SERVER_USERNAME}
       - PROXY_SERVER_PASSWORD=${PROXY_SERVER_PASSWORD}
+      
+      # Optional scraping configuration
       - SCRAPE_USER_AGENT=${SCRAPE_USER_AGENT}
       - SCRAPE_VIEWPORT_WIDTH=${SCRAPE_VIEWPORT_WIDTH}
       - SCRAPE_VIEWPORT_HEIGHT=${SCRAPE_VIEWPORT_HEIGHT}
@@ -26,6 +35,12 @@ services:
       - SCRAPE_DELAY_MAX=${SCRAPE_DELAY_MAX}
       - SCRAPE_BATCH_DELAY_MIN=${SCRAPE_BATCH_DELAY_MIN}
       - SCRAPE_BATCH_DELAY_MAX=${SCRAPE_BATCH_DELAY_MAX}
+      
+      # Optional retry configuration
+      - FIRECRAWL_RETRY_MAX_ATTEMPTS=${FIRECRAWL_RETRY_MAX_ATTEMPTS}
+      - FIRECRAWL_RETRY_INITIAL_DELAY=${FIRECRAWL_RETRY_INITIAL_DELAY}
+      - FIRECRAWL_RETRY_MAX_DELAY=${FIRECRAWL_RETRY_MAX_DELAY}
+      - FIRECRAWL_RETRY_BACKOFF_FACTOR=${FIRECRAWL_RETRY_BACKOFF_FACTOR}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s

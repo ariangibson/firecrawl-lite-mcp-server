@@ -44,7 +44,7 @@ USER nodejs
 EXPOSE 3000
 
 # Set environment to run HTTP server
-ENV HTTP_STREAMABLE_SERVER=true
+ENV ENABLE_HTTP_STREAMABLE_ENDPOINT=true
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

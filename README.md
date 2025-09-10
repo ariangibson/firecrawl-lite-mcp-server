@@ -149,6 +149,10 @@ LLM_MODEL=llama2
 
 ### **Optional Configuration**
 ```bash
+# Remote deployment configuration (⚠️ Required for remote access)
+ENABLE_HTTP_STREAMABLE_ENDPOINT=true  # Enable /mcp endpoint for Claude Code
+ENABLE_SSE_ENDPOINT=true              # Enable /sse endpoint for Claude Desktop (deprecated)
+
 # Proxy configuration (for web scraping and LLM API calls)
 PROXY_SERVER_URL=http://your-proxy.com:8080
 PROXY_SERVER_USERNAME=your_proxy_username
@@ -182,18 +186,102 @@ SCRAPE_BATCH_DELAY_MIN=2000 # Minimum delay between batch requests
 SCRAPE_BATCH_DELAY_MAX=5000 # Maximum delay between batch requests
 ```
 
-## 🐳 **Docker Deployment**
+## 🚀 **Deployment Modes**
 
-### **Option 1: Pre-built Image (Recommended)**
-Perfect for production, Docker Swarm, and Kubernetes deployments:
+### **🏠 Local Deployment (STDIO)**
+For use with local MCP clients like Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "firecrawl-lite": {
+      "command": "npx",
+      "args": ["-y", "@ariangibson/firecrawl-lite-mcp-server"],
+      "env": {
+        "LLM_API_KEY": "your_llm_api_key_here",
+        "LLM_PROVIDER_BASE_URL": "https://api.x.ai/v1",
+        "LLM_MODEL": "grok-code-fast-1"
+      }
+    }
+  }
+}
+```
+
+### **🌐 Remote Deployment (HTTP)**
+For remote access and Claude Desktop via proxy:
+
+#### **⚠️ Critical: Enable Remote Endpoints**
+**Remote deployments require explicit endpoint configuration!** By default, all HTTP endpoints are disabled for security.
 
 ```bash
-# Pull and run the latest image
-docker-compose up -d
+# Required environment variables for remote deployment
+ENABLE_HTTP_STREAMABLE_ENDPOINT=true  # Enables /mcp endpoint for Claude Code/remote clients
+ENABLE_SSE_ENDPOINT=true              # Enables /sse endpoint for Claude Desktop via mcp-proxy
+```
 
-# Or run directly with Docker
+#### **🔧 Remote Deployment Examples**
+
+**Docker with HTTP endpoints enabled:**
+```bash
 docker run -d \
   -p 3000:3000 \
+  -e ENABLE_HTTP_STREAMABLE_ENDPOINT=true \
+  -e ENABLE_SSE_ENDPOINT=true \
+  -e LLM_API_KEY=your_key_here \
+  -e LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 \
+  -e LLM_MODEL=grok-code-fast-1 \
+  ariangibson/firecrawl-lite-mcp-server:latest
+```
+
+**Claude Desktop with remote server (requires mcp-proxy):**
+```bash
+# Install mcp-proxy first
+npm install -g mcp-proxy
+
+# Configure Claude Desktop
+{
+  "mcpServers": {
+    "firecrawl-lite": {
+      "command": "mcp-proxy",
+      "args": ["http://your-server:3000/sse"]
+    }
+  }
+}
+```
+
+**Claude Code with remote server:**
+```bash
+claude config mcp add firecrawl-lite-remote \
+  --server-url "http://your-server:3000/mcp"
+```
+
+### **📡 Available Endpoints**
+
+| Endpoint | Purpose | Required For | Default |
+|----------|---------|--------------|---------|
+| `/mcp` | HTTP Streamable MCP | Claude Code, remote clients | ❌ Disabled |
+| `/sse` | Server-Sent Events | Claude Desktop via mcp-proxy | ❌ Disabled |  
+| `/health` | Health check | Monitoring, load balancers | ✅ Always enabled |
+
+### **🔒 Security Notice**
+
+**Endpoints are disabled by default for security.** This prevents accidental exposure when deploying containers. You must explicitly enable the endpoints you need:
+
+- **Local STDIO mode**: No endpoints needed (default behavior)
+- **Remote HTTP mode**: Enable `ENABLE_HTTP_STREAMABLE_ENDPOINT=true`
+- **Claude Desktop remote**: Enable `ENABLE_SSE_ENDPOINT=true` + use mcp-proxy
+
+## 🐳 **Docker Deployment**
+
+```bash
+# Pull and run the latest image with endpoints enabled
+docker-compose up -d
+
+# Or run directly with Docker (endpoints enabled)
+docker run -d \
+  -p 3000:3000 \
+  -e ENABLE_HTTP_STREAMABLE_ENDPOINT=true \
+  -e ENABLE_SSE_ENDPOINT=true \
   -e LLM_API_KEY=your_key_here \
   -e LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 \
   -e LLM_MODEL=grok-code-fast-1 \
@@ -227,7 +315,10 @@ docker pull ghcr.io/ariangibson/firecrawl-lite-mcp-server:latest
 - **Tagged versions**: `latest`, `v1.1.2`, etc.
 - **Same image, multiple sources**: Choose your preferred registry
 
-The server will be available at `http://localhost:3000` with a health endpoint at `http://localhost:3000/health`.
+The server will be available at `http://localhost:3000` with:
+- **Health endpoint**: `http://localhost:3000/health` (always enabled)
+- **MCP endpoint**: `http://localhost:3000/mcp` (if `ENABLE_HTTP_STREAMABLE_ENDPOINT=true`)
+- **SSE endpoint**: `http://localhost:3000/sse` (if `ENABLE_SSE_ENDPOINT=true`)
 
 ## 📊 **Usage Examples**
 

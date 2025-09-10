@@ -991,8 +991,8 @@ const CONFIG = {
     password: process.env.PROXY_SERVER_PASSWORD,
   },
   endpoints: {
-    enableMcpEndpoint: process.env.ENABLE_MCP_ENDPOINT !== 'false', // Default enabled
-    enableSseEndpoint: process.env.ENABLE_SSE_ENDPOINT === 'true',   // Default disabled  
+    enableHttpStreamableEndpoint: process.env.ENABLE_HTTP_STREAMABLE_ENDPOINT === 'true', // Default disabled for security
+    enableSseEndpoint: process.env.ENABLE_SSE_ENDPOINT === 'true',                         // Default disabled (deprecated)
   },
 };
 
@@ -1368,7 +1368,7 @@ async function runHTTPStreamableServer() {
       version: '1.1.2',
       timestamp: new Date().toISOString(),
       endpoints: {
-        mcp: CONFIG.endpoints.enableMcpEndpoint ? 'enabled' : 'disabled',
+        mcp: CONFIG.endpoints.enableHttpStreamableEndpoint ? 'enabled' : 'disabled',
         sse: CONFIG.endpoints.enableSseEndpoint ? 'enabled' : 'disabled'
       }
     });
@@ -1378,7 +1378,7 @@ async function runHTTPStreamableServer() {
   let sseTransport: SSEServerTransport | null = null;
 
   // MCP endpoint - only if enabled
-  if (CONFIG.endpoints.enableMcpEndpoint) {
+  if (CONFIG.endpoints.enableHttpStreamableEndpoint) {
     app.all('/mcp', async (req: Request, res: Response) => {
     try {
       const sessionId = req.headers['mcp-session-id'] as string | undefined;
@@ -1468,7 +1468,7 @@ async function runHTTPStreamableServer() {
   const appServer = app.listen(PORT, () => {
     console.log(`🚀 Firecrawl Lite MCP Server listening on port ${PORT}`);
     console.log(`📊 Health endpoint: http://localhost:${PORT}/health`);
-    if (CONFIG.endpoints.enableMcpEndpoint) {
+    if (CONFIG.endpoints.enableHttpStreamableEndpoint) {
       console.log(`🔌 MCP endpoint: http://localhost:${PORT}/mcp`);
     }
     if (CONFIG.endpoints.enableSseEndpoint) {
@@ -1511,8 +1511,8 @@ async function runHTTPStreamableServer() {
     });
   });
 }
-// Server startup - conditional based on environment
-if (process.env.HTTP_STREAMABLE_SERVER === 'true') {
+// Server startup - conditional based on enabled endpoints
+if (CONFIG.endpoints.enableHttpStreamableEndpoint || CONFIG.endpoints.enableSseEndpoint) {
   console.error('Starting MCP Server...');
   runHTTPStreamableServer().catch((error: any) => {
     console.error('Fatal error running HTTP server:', error);

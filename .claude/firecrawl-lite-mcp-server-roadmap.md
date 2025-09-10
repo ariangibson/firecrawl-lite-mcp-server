@@ -11,9 +11,9 @@
 - [ ] **Test with multiple MCP clients** - Ensure compatibility across different clients
 
 ### 📡 SSE Endpoint Implementation
-- [ ] **Implement `/sse` endpoint** - Server-Sent Events for real-time communication
-- [ ] **Environment variable control** - `ENABLE_SSE_ENDPOINT=true/false`
-- [ ] **Environment variable control** - `ENABLE_MCP_ENDPOINT=true/false` 
+- [x] **Implement `/sse` endpoint** - Server-Sent Events for real-time communication ✅
+- [x] **Environment variable control** - `ENABLE_SSE_ENDPOINT=true/false` ✅
+- [x] **Environment variable control** - `ENABLE_HTTP_STREAMABLE_ENDPOINT=true/false` ✅ 
 
 ### 🔄 Proxy Server Rotation
 - [x] **Parse range syntax** - Support `PROXY_SERVER_URL=https://us.decodo.com:10001-10010` ✅
@@ -22,20 +22,20 @@
 - [x] **Health checking** - ~~Test proxy availability before use~~ (Removed - unnecessary complexity)
 
 ### 👤 User Agent Rotation  
-- [ ] **Array support** - `SCRAPE_USER_AGENTS=["agent1", "agent2", "agent3"]`
-- [ ] **Rotation logic** - Cycle through different user agents
-- [ ] **Random selection** - Pick random agent per request vs sequential
+- [x] **Array support** - `SCRAPE_USER_AGENTS=["agent1", "agent2", "agent3"]` ✅
+- [x] **Rotation logic** - Cycle through different user agents ✅
+- [x] **Random selection** - Pick random agent per request vs sequential ✅
 
 ### 🐳 Container Registry Publishing
-- [ ] **Docker Hub workflow** - Ensure automated publishing works ✅ (already done)
-- [ ] **GitHub Container Registry** - Add `ghcr.io` publishing workflow
-- [ ] **Multi-arch builds** - Ensure both `amd64` and `arm64` support
+- [x] **Docker Hub workflow** - Ensure automated publishing works ✅ 
+- [x] **GitHub Container Registry** - Add `ghcr.io` publishing workflow ✅
+- [x] **Multi-arch builds** - Ensure both `amd64` and `arm64` support ✅
 
 ### 📸 Screenshot Handling Redesign
-- [ ] **Base64 return** - Return screenshots as base64 data instead of saving to disk
-- [ ] **Memory management** - Handle large images without memory issues  
-- [ ] **Size limits** - Add configurable max screenshot size
-- [ ] **Temporary cleanup** - If we must save temporarily, auto-delete after return
+- [x] **Base64 return** - Return screenshots as base64 data instead of saving to disk ✅
+- [x] **Memory management** - Handle large images without memory issues ✅ 
+- [x] **Size limits** - Add configurable max screenshot size ✅
+- [x] **Temporary cleanup** - If we must save temporarily, auto-delete after return ✅
 - [ ] **Consider removal** - May need to remove screenshot tool entirely if unsolvable
 
 ## Nice to Have / Future Enhancements
@@ -76,4 +76,4 @@
 - ✅ GitHub Container Registry publishing implemented
 
 ---
-*Last updated: 2025-01-09*
+*Last updated: 2025-01-10*
