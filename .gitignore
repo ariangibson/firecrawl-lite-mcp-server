@@ -36,4 +36,8 @@ restart-dev.sh
 
 # Sensitive documentation files
 GITHUB_RESPONSE_GUIDE.md
-TESTING.md 
+TESTING.md
+
+# Temporary files
+temp.yml
+*.tmp 
