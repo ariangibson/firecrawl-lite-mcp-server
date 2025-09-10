@@ -248,8 +248,8 @@ async function screenshotWebpage(url: string, width: number = 1920, height: numb
 
   let browser;
   try {
-    // Get proxy configuration
-    const proxyUrl = CONFIG.proxy.url;
+    // Get proxy configuration with rotation
+    const proxyUrl = getNextProxy();
     const proxyUsername = CONFIG.proxy.username;
     const proxyPassword = CONFIG.proxy.password;
     
@@ -420,8 +420,8 @@ async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Prom
 
   let browser;
   try {
-    // Get proxy configuration
-    const proxyUrl = CONFIG.proxy.url;
+    // Get proxy configuration with rotation
+    const proxyUrl = getNextProxy();
     const proxyUsername = CONFIG.proxy.username;
     const proxyPassword = CONFIG.proxy.password;
     
@@ -675,8 +675,8 @@ User Request: ${sanitizedPrompt}
 Please provide the extracted data in JSON format. ${schema ? 'Ensure the response matches the provided schema.' : 'Structure the data logically based on the content and request.'}
 `;
     
-    // Get proxy configuration for LLM API calls
-    const proxyUrl = CONFIG.proxy.url;
+    // Get proxy configuration for LLM API calls with rotation
+    const proxyUrl = getNextProxy();
     const proxyUsername = CONFIG.proxy.username;
     const proxyPassword = CONFIG.proxy.password;
     
@@ -823,6 +823,46 @@ const server = new Server(
     },
   }
 );
+
+// Proxy rotation state
+let currentProxyIndex = 0;
+let availableProxies: string[] = [];
+
+// Parse proxy URL with range support
+function parseProxyUrls(proxyUrl: string): string[] {
+  if (!proxyUrl) return [];
+  
+  // Check for port range syntax: https://example.com:10001-10010
+  const rangeMatch = proxyUrl.match(/^(https?:\/\/[^:]+):(\d+)-(\d+)$/);
+  if (rangeMatch) {
+    const [, baseUrl, startPort, endPort] = rangeMatch;
+    const start = parseInt(startPort, 10);
+    const end = parseInt(endPort, 10);
+    const proxies: string[] = [];
+    
+    for (let port = start; port <= end; port++) {
+      proxies.push(`${baseUrl}:${port}`);
+    }
+    
+    return proxies;
+  }
+  
+  // Single proxy URL
+  return [proxyUrl];
+}
+
+// Get next proxy URL with rotation
+function getNextProxy(): string | undefined {
+  if (availableProxies.length === 0) return undefined;
+  
+  const proxy = availableProxies[currentProxyIndex];
+  currentProxyIndex = (currentProxyIndex + 1) % availableProxies.length;
+  
+  return proxy;
+}
+
+// Initialize proxy list
+availableProxies = parseProxyUrls(process.env.PROXY_SERVER_URL || '');
 
 // Configuration for retries and monitoring
 const CONFIG = {
