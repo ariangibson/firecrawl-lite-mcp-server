@@ -1513,7 +1513,7 @@ async function runHTTPStreamableServer() {
 }
 // Server startup - conditional based on environment
 if (process.env.HTTP_STREAMABLE_SERVER === 'true') {
-  console.error('Starting HTTP Streamable MCP Server...');
+  console.error('Starting MCP Server...');
   runHTTPStreamableServer().catch((error: any) => {
     console.error('Fatal error running HTTP server:', error);
     process.exit(1);
