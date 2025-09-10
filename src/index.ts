@@ -1445,21 +1445,53 @@ async function runHTTPStreamableServer() {
 
   // SSE endpoint - only if enabled  
   if (CONFIG.endpoints.enableSseEndpoint) {
-    app.get('/sse', async (_req, res) => {
-      sseTransport = new SSEServerTransport(`/messages`, res);
-      res.on('close', () => {
-        sseTransport = null;
-      });
-      await server.connect(sseTransport);
+    // Map to store SSE transports per session
+    const sseTransports = new Map<string, SSEServerTransport>();
+    
+    app.get('/sse', async (req, res) => {
+      try {
+        const sessionId = req.query.sessionId as string || randomUUID();
+        console.log(`SSE connection established for session: ${sessionId}`);
+        
+        const transport = new SSEServerTransport(`/messages`, res);
+        sseTransports.set(sessionId, transport);
+        
+        res.on('close', () => {
+          console.log(`SSE connection closed for session: ${sessionId}`);
+          sseTransports.delete(sessionId);
+          transport.close?.();
+        });
+        
+        res.on('error', (error) => {
+          console.error(`SSE error for session ${sessionId}:`, error);
+          sseTransports.delete(sessionId);
+          transport.close?.();
+        });
+        
+        await server.connect(transport);
+      } catch (error) {
+        console.error('SSE endpoint error:', error);
+        res.status(500).json({ error: 'Failed to establish SSE connection' });
+      }
     });
 
-    app.post('/messages', (req, res) => {
-      if (sseTransport) {
-        sseTransport.handlePostMessage(req, res);
-      } else {
-        res.status(503).json({
-          error: 'SSE transport not available. Connect to /sse first.'
-        });
+    app.post('/messages', async (req, res) => {
+      try {
+        const sessionId = req.query.sessionId as string;
+        const transport = sessionId ? sseTransports.get(sessionId) : Array.from(sseTransports.values())[0];
+        
+        if (transport) {
+          await transport.handlePostMessage(req, res);
+        } else {
+          console.error('No SSE transport available for session:', sessionId);
+          res.status(503).json({
+            error: 'SSE transport not available. Connect to /sse first.',
+            sessionId: sessionId
+          });
+        }
+      } catch (error) {
+        console.error('Messages endpoint error:', error);
+        res.status(500).json({ error: 'Failed to handle message' });
       }
     });
   }
