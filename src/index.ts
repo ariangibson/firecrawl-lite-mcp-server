@@ -253,8 +253,8 @@ async function screenshotWebpage(url: string, width: number = 1920, height: numb
     const proxyUsername = CONFIG.proxy.username;
     const proxyPassword = CONFIG.proxy.password;
     
-    // Get scraping configuration
-    const customUserAgent = CONFIG.scraping.userAgent;
+    // Get scraping configuration with user agent rotation
+    const customUserAgent = getNextUserAgent();
     const delayMin = CONFIG.scraping.delayMin;
     const delayMax = CONFIG.scraping.delayMax;
 
@@ -426,8 +426,8 @@ async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Prom
     const proxyPassword = CONFIG.proxy.password;
     
 
-    // Get scraping configuration
-    const customUserAgent = CONFIG.scraping.userAgent;
+    // Get scraping configuration with user agent rotation
+    const customUserAgent = getNextUserAgent();
     const viewportWidth = CONFIG.scraping.viewportWidth;
     const viewportHeight = CONFIG.scraping.viewportHeight;
     const delayMin = CONFIG.scraping.delayMin;
@@ -863,6 +863,41 @@ function getNextProxy(): string | undefined {
 
 // Initialize proxy list
 availableProxies = parseProxyUrls(process.env.PROXY_SERVER_URL || '');
+
+// User agent rotation state
+let currentUserAgentIndex = 0;
+let availableUserAgents: string[] = [];
+
+// Parse user agent array with JSON support
+function parseUserAgents(userAgentEnv: string): string[] {
+  if (!userAgentEnv) return [DEFAULT_USER_AGENT];
+  
+  // Try to parse as JSON array first
+  try {
+    const parsed = JSON.parse(userAgentEnv);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.filter(ua => typeof ua === 'string' && ua.trim().length > 0);
+    }
+  } catch {
+    // Not JSON, treat as single user agent
+  }
+  
+  // Single user agent string
+  return [userAgentEnv.trim()];
+}
+
+// Get next user agent with rotation
+function getNextUserAgent(): string {
+  if (availableUserAgents.length === 0) return DEFAULT_USER_AGENT;
+  
+  const userAgent = availableUserAgents[currentUserAgentIndex];
+  currentUserAgentIndex = (currentUserAgentIndex + 1) % availableUserAgents.length;
+  
+  return userAgent;
+}
+
+// Initialize user agent list
+availableUserAgents = parseUserAgents(process.env.SCRAPE_USER_AGENT || '');
 
 // Configuration for retries and monitoring
 const CONFIG = {
