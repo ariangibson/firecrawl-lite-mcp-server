@@ -18,9 +18,26 @@ import { randomUUID } from 'node:crypto';
 // External dependencies
 import dotenv from 'dotenv';
 import axios from 'axios';
-import puppeteer from 'puppeteer';
 
 dotenv.config();
+
+// Puppeteer will be loaded dynamically to handle mixed module issues
+let puppeteer: any;
+let StealthPlugin: any;
+
+// Initialize puppeteer modules
+async function initializePuppeteer() {
+  if (!puppeteer) {
+    const puppeteerExtra = await import('puppeteer-extra');
+    const stealthPlugin = await import('puppeteer-extra-plugin-stealth');
+    
+    puppeteer = puppeteerExtra.default;
+    StealthPlugin = stealthPlugin.default;
+    
+    // Configure puppeteer-extra with stealth plugin
+    puppeteer.use(StealthPlugin());
+  }
+}
 
 // Constants
 const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -185,10 +202,207 @@ const EXTRACT_WITH_SCHEMA_TOOL: Tool = {
   },
 };
 
+const SCREENSHOT_TOOL: Tool = {
+  name: 'screenshot',
+  description: 'Take a screenshot of a webpage using stealth browser',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      url: { type: 'string', description: 'Webpage URL to screenshot' },
+      width: { 
+        type: 'number', 
+        description: 'Viewport width in pixels',
+        default: 1920
+      },
+      height: { 
+        type: 'number', 
+        description: 'Viewport height in pixels', 
+        default: 1080
+      },
+      fullPage: { 
+        type: 'boolean', 
+        description: 'Capture full page height',
+        default: false
+      },
+    },
+    required: ['url'],
+  },
+};
+
 // Lightweight tool definitions for essential Firecrawl functionality
 
 // Local web scraping functions
+async function screenshotWebpage(url: string, width: number = 1920, height: number = 1080, fullPage: boolean = false): Promise<{ success: boolean; imagePath?: string; error?: string; }> {
+  // Initialize puppeteer modules
+  await initializePuppeteer();
+  
+  // SECURITY: Validate and sanitize URL
+  if (!isValidUrl(url)) {
+    return {
+      success: false,
+      error: 'Invalid URL format. Only HTTP and HTTPS URLs are allowed.'
+    };
+  }
+
+  const sanitizedUrl = sanitizeUrl(url);
+
+  let browser;
+  try {
+    // Get proxy configuration
+    const proxyUrl = CONFIG.proxy.url;
+    const proxyUsername = CONFIG.proxy.username;
+    const proxyPassword = CONFIG.proxy.password;
+    
+    // Get scraping configuration
+    const customUserAgent = CONFIG.scraping.userAgent;
+    const delayMin = CONFIG.scraping.delayMin;
+    const delayMax = CONFIG.scraping.delayMax;
+
+    // Build Puppeteer launch options with enhanced anti-detection
+    const launchOptions: any = {
+      headless: 'new', // Use new headless mode for better stealth
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-extensions-except',
+        '--disable-plugins-discovery',
+        '--no-default-browser-check',
+        '--no-experiments',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--disable-translate',
+        '--hide-scrollbars',
+        '--mute-audio',
+        '--no-pings',
+        '--no-session-id',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        `--user-agent=${customUserAgent}`
+      ]
+    };
+    
+    // Add proxy configuration if available
+    if (proxyUrl) {
+      launchOptions.args.push(`--proxy-server=${proxyUrl}`);
+      
+      if (proxyUsername && proxyPassword) {
+        console.error(`Using authenticated proxy for screenshot: [REDACTED]`);
+      } else {
+        console.error(`Using proxy for screenshot: ${proxyUrl}`);
+      }
+    }
+    
+    browser = await puppeteer.launch(launchOptions);
+    
+    const page = await browser.newPage();
+    
+    // Enhanced anti-detection setup
+    await page.setUserAgent(customUserAgent);
+    
+    // Set viewport
+    await page.setViewport({ width, height });
+    
+    // Add common browser properties to avoid detection
+    await page.evaluateOnNewDocument(() => {
+      // Override navigator properties
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+      Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+      
+      // Mock common browser APIs
+      (window as any).chrome = { runtime: {} };
+    });
+    
+    // Handle proxy authentication if credentials are provided
+    if (proxyUrl && proxyUsername && proxyPassword) {
+      await page.authenticate({
+        username: proxyUsername,
+        password: proxyPassword
+      });
+    }
+    
+    // Add random delay before navigation
+    const delay = Math.floor(Math.random() * (delayMax - delayMin)) + delayMin;
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    // Navigate to the page
+    await page.goto(sanitizedUrl, {
+      waitUntil: 'networkidle2',
+      timeout: 30000
+    });
+    
+    // Simulate human-like behavior
+    const humanDelay = Math.floor(Math.random() * 3000) + 2000;
+    await new Promise(resolve => setTimeout(resolve, humanDelay));
+    
+    // Simulate human scrolling behavior
+    await page.evaluate(() => {
+      window.scrollBy(0, Math.floor(Math.random() * 300) + 100);
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 1000) + 500));
+    
+    // Scroll back up slightly
+    await page.evaluate(() => {
+      window.scrollBy(0, -Math.floor(Math.random() * 100) - 50);
+    });
+    
+    // Final wait for any dynamic content
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Create local tmp directory if it doesn't exist
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const tmpDir = path.join(process.cwd(), 'tmp');
+    
+    try {
+      await fs.mkdir(tmpDir, { recursive: true });
+    } catch (error) {
+      // Directory might already exist, ignore error
+    }
+    
+    // Generate unique filename
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const domain = new URL(sanitizedUrl).hostname.replace(/[^a-zA-Z0-9]/g, '-');
+    const filename = `screenshot-${domain}-${timestamp}.png`;
+    const imagePath = path.join(tmpDir, filename);
+    
+    // Take the screenshot
+    await page.screenshot({ 
+      path: imagePath,
+      fullPage,
+      type: 'png'
+    });
+    
+    return {
+      success: true,
+      imagePath
+    };
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+}
+
 async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Promise<ScrapedContent> {
+  // Initialize puppeteer modules
+  await initializePuppeteer();
+  
   // SECURITY: Validate and sanitize URL
   if (!isValidUrl(url)) {
     return {
@@ -210,6 +424,7 @@ async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Prom
     const proxyUrl = CONFIG.proxy.url;
     const proxyUsername = CONFIG.proxy.username;
     const proxyPassword = CONFIG.proxy.password;
+    
 
     // Get scraping configuration
     const customUserAgent = CONFIG.scraping.userAgent;
@@ -221,7 +436,7 @@ async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Prom
     // Build Puppeteer launch options with enhanced anti-detection
     // SECURITY: Removed --disable-web-security which is a major security risk
     const launchOptions: any = {
-      headless: true,
+      headless: 'new', // Use new headless mode for better stealth
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -231,6 +446,21 @@ async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Prom
         '--no-zygote',
         '--disable-gpu',
         '--disable-features=VizDisplayCompositor',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-extensions-except',
+        '--disable-plugins-discovery',
+        '--no-default-browser-check',
+        '--no-experiments',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--disable-translate',
+        '--hide-scrollbars',
+        '--mute-audio',
+        '--no-pings',
+        '--no-session-id',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
         `--user-agent=${customUserAgent}`
       ]
     };
@@ -287,8 +517,27 @@ async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Prom
       timeout: 30000
     });
     
-    // Wait additional time for dynamic content
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Simulate human-like behavior
+    // Random delay between 2-5 seconds
+    const humanDelay = Math.floor(Math.random() * 3000) + 2000;
+    await new Promise(resolve => setTimeout(resolve, humanDelay));
+    
+    // Simulate human scrolling behavior
+    await page.evaluate(() => {
+      // Scroll a bit like a human would
+      window.scrollBy(0, Math.floor(Math.random() * 300) + 100);
+    });
+    
+    // Another small delay
+    await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 1000) + 500));
+    
+    // Scroll back up slightly
+    await page.evaluate(() => {
+      window.scrollBy(0, -Math.floor(Math.random() * 100) - 50);
+    });
+    
+    // Final wait for any dynamic content
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Extract title
     const title = await page.title();
@@ -332,6 +581,7 @@ async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Prom
     
     // Get HTML
     const html = await page.content();
+    
     
     return {
       url,
@@ -530,6 +780,15 @@ function isScrapeOptions(args: unknown): args is { url: string; onlyMainContent?
   );
 }
 
+function isScreenshotOptions(args: unknown): args is { url: string; width?: number; height?: number; fullPage?: boolean } {
+  return (
+    typeof args === 'object' &&
+    args !== null &&
+    'url' in args &&
+    typeof (args as { url: unknown }).url === 'string'
+  );
+}
+
 function isBatchScrapeOptions(args: unknown): args is { urls: string[]; onlyMainContent?: boolean } {
   return (
     typeof args === 'object' &&
@@ -595,7 +854,6 @@ const CONFIG = {
 };
 
 // Get LLM configuration
-const LLM_API_KEY = CONFIG.llm.apiKey;
 const LLM_PROVIDER_BASE_URL = CONFIG.llm.providerBaseUrl;
 const LLM_MODEL = CONFIG.llm.model;
 
@@ -639,6 +897,7 @@ server.setRequestHandler(
         BATCH_SCRAPE_TOOL,
         EXTRACT_DATA_TOOL,
         EXTRACT_WITH_SCHEMA_TOOL,
+        SCREENSHOT_TOOL,
       ],
     };
   }
@@ -677,6 +936,42 @@ server.setRequestHandler(
             content: [{ type: 'text', text: result.success ? result.markdown : `Error: ${result.error}` }],
             isError: !result.success,
           };
+        }
+
+        case 'screenshot': {
+          if (!isScreenshotOptions(args)) {
+            throw new Error('Invalid arguments for screenshot');
+          }
+
+          // SECURITY: Validate URL before processing
+          if (!isValidUrl(args.url)) {
+            throw new Error('Invalid URL format. Only HTTP and HTTPS URLs are allowed.');
+          }
+
+          const result = await screenshotWebpage(
+            args.url, 
+            args.width || 1920, 
+            args.height || 1080, 
+            args.fullPage || false
+          );
+          
+          if (result.success && result.imagePath) {
+            return {
+              content: [{ 
+                type: 'text', 
+                text: `Screenshot saved successfully: ${result.imagePath}` 
+              }],
+              isError: false,
+            };
+          } else {
+            return {
+              content: [{ 
+                type: 'text', 
+                text: `Screenshot failed: ${result.error}` 
+              }],
+              isError: true,
+            };
+          }
         }
 
         case 'batch_scrape': {
@@ -881,16 +1176,6 @@ server.setRequestHandler(
   }
 );
 
-// Helper function to format results
-function formatResults(data: ScrapedContent[]): string {
-  return data
-    .map((doc) => {
-      const content = doc.markdown || doc.content || 'No content';
-      return `Title: ${doc.title}
-Content: ${content.substring(0, 100)}${content.length > 100 ? '...' : ''}`;
-    })
-    .join('\n\n');
-}
 
 // Utility function to trim trailing whitespace from text responses
 // This prevents Claude API errors with "final assistant content cannot end with trailing whitespace"
@@ -932,7 +1217,7 @@ async function runSSELocalServer() {
   let transport: SSEServerTransport | null = null;
   const app = express();
 
-  app.get('/sse', async (req, res) => {
+  app.get('/sse', async (_req, res) => {
     transport = new SSEServerTransport(`/messages`, res);
     res.on('close', () => {
       transport = null;
@@ -965,7 +1250,7 @@ async function runHTTPStreamableServer() {
   app.use(express.json());
 
   // Health check endpoint
-  app.get('/health', (req, res) => {
+  app.get('/health', (_req, res) => {
     res.status(200).json({
       status: 'OK',
       server: 'Firecrawl Lite MCP Server',

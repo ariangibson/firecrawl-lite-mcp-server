@@ -4,6 +4,9 @@ node_modules/
 # Build
 dist/
 
+# Screenshots
+tmp/
+
 # Logs
 logs
 *.log
@@ -27,6 +30,9 @@ v1.2.md
 # OS
 .DS_Store
 Thumbs.db
+
+# Development scripts
+restart-dev.sh
 
 # Sensitive documentation files
 GITHUB_RESPONSE_GUIDE.md
