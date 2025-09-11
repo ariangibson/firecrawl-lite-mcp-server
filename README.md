@@ -2,14 +2,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A **privacy-first, standalone** MCP server that provides web scraping and data extraction tools using local browser automation and your own LLM API key. **No external dependencies or API keys required** - completely decoupled from Firecrawl's cloud service.
+A **privacy-first, standalone** MCP server that provides web scraping and data extraction tools using local browser automation and your own LLM API key. **No external dependencies or API keys required**
 
 ## 🎯 **What Makes Firecrawl Lite Special**
 
 ### **🔒 Privacy-First Architecture**
 - **Local Processing** - All web scraping and data extraction happens on your machine
 - **Your Data Stays Local** - Content is processed locally, not sent to third parties
-- **No External Service Lock-in** - Doesn't require Firecrawl's cloud API
+- **No External Service Lock-in** - Doesn't require a cloud API
 - **Complete Control** - You own your data and infrastructure
 
 ### **💰 Cost-Effective & Transparent**
@@ -126,13 +126,14 @@ LLM_MODEL=llama2
 
 ## 🌐 **Remote Deployment**
 
-For remote servers or Docker deployments, enable HTTP endpoints:
+For remote servers or Docker deployments, be sure to enable at least one of the HTTP endpoints (depending on which transport protocol you are planning to use) - these are not enabled by default:
 
 ### **Docker**
 ```bash
 docker run -d \
   -p 3000:3000 \
   -e ENABLE_HTTP_STREAMABLE_ENDPOINT=true \
+  -e ENABLE_SSE_ENDPOINT=true \
   -e LLM_API_KEY=your_key_here \
   -e LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 \
   -e LLM_MODEL=grok-code-fast-1 \
@@ -146,7 +147,14 @@ claude mcp add firecrawl-lite-remote http://your-server:3000/mcp -t http
 
 ### **Claude Desktop (Remote)**
 
-**Method 1: mcp-proxy (HTTP/HTTPS)**
+**Method 1: Connectors (Recommended - HTTPS only)**
+The official Claude Desktop method for remote MCP servers:
+- Go to Claude Desktop → Settings → Connectors
+- Add connector: `https://your-server.com:3000/mcp`
+- **Requires**: HTTPS server with valid SSL certificate
+
+**Method 2: mcp-proxy (HTTP/HTTPS fallback)**
+For servers without SSL certificates:
 ```bash
 pip install mcp-proxy
 ```
@@ -162,22 +170,18 @@ Add to claude_desktop_config.json:
 }
 ```
 
-**Method 2: Connectors (HTTPS only)**
-- Go to Claude Desktop → Settings → Connectors
-- Add connector: `https://your-server.com:3000/mcp`
-
 ## 🛠️ **Advanced Configuration**
 
 ### **Proxy Support**
 ```bash
-PROXY_SERVER_URL=http://your-proxy.com:8080
-PROXY_SERVER_USERNAME=username
-PROXY_SERVER_PASSWORD=password
+PROXY_SERVER_URL=http://your-proxy-server.com:1337
+PROXY_SERVER_USERNAME=your-username
+PROXY_SERVER_PASSWORD=your-password
 ```
 
 ### **Anti-Detection**
 ```bash
-SCRAPE_USER_AGENT=Mozilla/5.0 (...)
+SCRAPE_USER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.3"
 SCRAPE_DELAY_MIN=1000
 SCRAPE_DELAY_MAX=3000
 ```
