@@ -1486,7 +1486,7 @@ async function runHTTPStreamableServer() {
         
         if (transport) {
           console.log(`Routing message from session ${sessionId} to transport`);
-          await transport.handlePostMessage(req, res);
+          await transport.handlePostMessage(req, res, req.body);
         } else {
           console.error('No SSE transport available. Active sessions:', Array.from(sseTransports.keys()));
           res.status(503).json({
