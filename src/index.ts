@@ -1478,15 +1478,21 @@ async function runHTTPStreamableServer() {
     app.post('/messages', async (req, res) => {
       try {
         const sessionId = req.query.sessionId as string;
-        const transport = sessionId ? sseTransports.get(sessionId) : Array.from(sseTransports.values())[0];
+        // First try exact match, then fallback to any available transport
+        let transport = sessionId ? sseTransports.get(sessionId) : null;
+        if (!transport) {
+          transport = Array.from(sseTransports.values())[0];
+        }
         
         if (transport) {
+          console.log(`Routing message from session ${sessionId} to transport`);
           await transport.handlePostMessage(req, res);
         } else {
-          console.error('No SSE transport available for session:', sessionId);
+          console.error('No SSE transport available. Active sessions:', Array.from(sseTransports.keys()));
           res.status(503).json({
             error: 'SSE transport not available. Connect to /sse first.',
-            sessionId: sessionId
+            sessionId: sessionId,
+            activeSessions: Array.from(sseTransports.keys())
           });
         }
       } catch (error) {
