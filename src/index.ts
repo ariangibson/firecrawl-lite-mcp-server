@@ -1468,7 +1468,6 @@ async function runHTTPStreamableServer() {
           transport.close?.();
         });
         
-        await transport.start();
         await server.connect(transport);
       } catch (error) {
         console.error('SSE endpoint error:', error);
