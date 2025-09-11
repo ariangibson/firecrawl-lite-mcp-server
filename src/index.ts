@@ -1453,7 +1453,7 @@ async function runHTTPStreamableServer() {
         const sessionId = req.query.sessionId as string || randomUUID();
         console.log(`SSE connection established for session: ${sessionId}`);
         
-        const transport = new SSEServerTransport(`/messages`, res);
+        const transport = new SSEServerTransport(`/messages?sessionId=${sessionId}`, res);
         sseTransports.set(sessionId, transport);
         
         res.on('close', () => {
@@ -1469,6 +1469,7 @@ async function runHTTPStreamableServer() {
         });
         
         await server.connect(transport);
+        await transport.start();
       } catch (error) {
         console.error('SSE endpoint error:', error);
         res.status(500).json({ error: 'Failed to establish SSE connection' });
@@ -1494,6 +1495,7 @@ async function runHTTPStreamableServer() {
         res.status(500).json({ error: 'Failed to handle message' });
       }
     });
+
   }
 
   const PORT = 3000;
