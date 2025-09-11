@@ -25,7 +25,7 @@ dotenv.config();
 let puppeteer: any;
 let StealthPlugin: any;
 
-// Initialize puppeteer modules
+// Initialize puppeteer modules and ensure Chrome is available
 async function initializePuppeteer() {
   if (!puppeteer) {
     const puppeteerExtra = await import('puppeteer-extra');
@@ -36,6 +36,21 @@ async function initializePuppeteer() {
     
     // Configure puppeteer-extra with stealth plugin
     puppeteer.use(StealthPlugin());
+    
+    // Check if Chrome is available, install if needed
+    try {
+      await puppeteer.executablePath();
+    } catch (error) {
+      console.error('Chrome not found, attempting to install...');
+      const { execSync } = await import('child_process');
+      try {
+        execSync('npx puppeteer browsers install chrome', { stdio: 'inherit' });
+        console.error('Chrome installation completed successfully');
+      } catch (installError) {
+        console.error('Failed to install Chrome automatically. Please run: npx puppeteer browsers install chrome');
+        throw new Error('Chrome browser not found and automatic installation failed');
+      }
+    }
   }
 }
 

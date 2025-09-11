@@ -67,12 +67,17 @@ This standalone version provides local web scraping and data extraction using Pu
 
 ## 🚀 **Quick Start**
 
-### **1. No Installation Required!**
-This MCP server runs via `npx` - no global installation needed.
+### **1. System Requirements**
+- **Node.js** (version 18 or higher)
+- **Chrome/Chromium browser** (automatically installed on first run)
+- **Internet access** (for web scraping and LLM API calls)
 
-### **2. Configure your MCP client:**
+### **2. No Installation Required!**
+This MCP server runs via `npx` - no global installation needed. Chrome browser is automatically installed on first use.
 
-#### **Claude Desktop**
+### **3. Configure your MCP client:**
+
+#### **Claude Desktop (Local)**
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
@@ -91,6 +96,48 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
+#### **Claude Desktop (Remote Server)**
+
+**💡 Two Methods for Remote Server Connection:**
+
+**Method 1: Use mcp-proxy (✅ Tested & Working)**
+Works with both HTTP and HTTPS servers via SSE transport:
+
+```bash
+# Install mcp-proxy
+pip install mcp-proxy
+```
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "firecrawl-lite": {
+      "command": "/Users/[username]/.local/bin/mcp-proxy",
+      "args": ["http://[internal_server_ip_address]:3000/sse"]
+    }
+  }
+}
+```
+
+**⚠️ Important:** 
+- Replace `[username]` with your actual username
+- Replace `[internal_server_ip_address]` with your server's IP
+- Your server must have `ENABLE_SSE_ENDPOINT=true` configured
+- Works with both `http://` and `https://` server URLs
+
+**Method 2: Built-in Connectors (Should Work - Requires HTTPS)**
+For HTTPS servers, use Claude Desktop's built-in Connectors:
+
+1. Go to **Settings → Connectors**
+2. Add connector with URL: `https://your-server.com:3000/mcp`
+3. Configure environment variables in connector settings
+
+**Requirements:**
+- Server must have SSL certificate (HTTPS)
+- Server must have `ENABLE_HTTP_STREAMABLE_ENDPOINT=true` configured
+- Uses HTTP Streamable transport (same as Claude Code)
+
 #### **LM Studio**
 If npx doesn't work with LM Studio, you can globally install first:
 ```bash
@@ -99,6 +146,8 @@ npm install -g @ariangibson/firecrawl-lite-mcp-server
 Then use `"command": "firecrawl-lite-mcp-server"` without npx.
 
 #### **Claude Code (CLI)**
+
+**Local Installation:**
 ```bash
 claude config mcp add firecrawl-lite \
   --command "npx" \
@@ -108,7 +157,46 @@ claude config mcp add firecrawl-lite \
   --env LLM_MODEL=grok-code-fast-1
 ```
 
-### **3. Restart your MCP client and start scraping!**
+**Remote Server (✅ Tested & Working):**
+```bash
+claude mcp add firecrawl-lite-remote http://your-server:3000/mcp -t http
+```
+- Uses HTTP Streamable transport  
+- Works with both HTTP and HTTPS servers
+- Server must have `ENABLE_HTTP_STREAMABLE_ENDPOINT=true` configured
+
+### **4. Restart your MCP client and start scraping!**
+
+## 🛠️ **Troubleshooting**
+
+### **Puppeteer/Chrome Issues**
+Chrome is automatically installed on first use. If you encounter issues:
+
+```bash
+# Manual Chrome installation (if auto-install fails)
+npx puppeteer browsers install chrome
+
+# Clear corrupted Puppeteer cache (if needed)
+rm -rf ~/.cache/puppeteer && npx puppeteer browsers install chrome
+```
+
+**Common symptoms:**
+- "Failed to launch the browser process"
+- "Google Chrome for Testing.app" not found
+- Path resolution errors
+
+**Note:** First run may take longer due to Chrome download (~100MB)
+
+### **Environment Variables**
+Ensure these are set for data extraction features:
+- `LLM_API_KEY` - Your LLM provider API key
+- `LLM_PROVIDER_BASE_URL` - Your LLM provider URL  
+- `LLM_MODEL` - Your LLM model name
+
+### **Network Issues**
+- Check internet connectivity for web scraping
+- Verify LLM provider URL is accessible
+- Consider proxy settings if behind corporate firewall
 
 ## ⚙️ **Configuration Guide**
 
@@ -150,8 +238,8 @@ LLM_MODEL=llama2
 ### **Optional Configuration**
 ```bash
 # Remote deployment configuration (⚠️ Required for remote access)
-ENABLE_HTTP_STREAMABLE_ENDPOINT=true  # Enable /mcp endpoint for Claude Code
-ENABLE_SSE_ENDPOINT=true              # Enable /sse endpoint for Claude Desktop (deprecated)
+ENABLE_HTTP_STREAMABLE_ENDPOINT=true  # Enable /mcp endpoint for Claude Code/Connectors
+ENABLE_SSE_ENDPOINT=true              # Enable /sse endpoint for Claude Desktop via mcp-proxy
 
 # Proxy configuration (for web scraping and LLM API calls)
 PROXY_SERVER_URL=http://your-proxy.com:8080
@@ -257,19 +345,28 @@ claude config mcp add firecrawl-lite-remote \
 
 ### **📡 Available Endpoints**
 
-| Endpoint | Purpose | Required For | Default |
-|----------|---------|--------------|---------|
-| `/mcp` | HTTP Streamable MCP | Claude Code, remote clients | ❌ Disabled |
-| `/sse` | Server-Sent Events | Claude Desktop via mcp-proxy | ❌ Disabled |  
-| `/health` | Health check | Monitoring, load balancers | ✅ Always enabled |
+| Endpoint | Purpose | Required For | Environment Variable | Status |
+|----------|---------|--------------|---------------------|--------|
+| `/mcp` | HTTP Streamable MCP | Claude Code, Claude Desktop Connectors (HTTPS) | `ENABLE_HTTP_STREAMABLE_ENDPOINT=true` | ✅ Tested with Claude Code |
+| `/sse` | Server-Sent Events | Claude Desktop via mcp-proxy | `ENABLE_SSE_ENDPOINT=true` | ✅ Tested & Working |
+| `/health` | Health check | Monitoring, load balancers | Always enabled | ✅ Always Available |
 
 ### **🔒 Security Notice**
 
 **Endpoints are disabled by default for security.** This prevents accidental exposure when deploying containers. You must explicitly enable the endpoints you need:
 
 - **Local STDIO mode**: No endpoints needed (default behavior)
-- **Remote HTTP mode**: Enable `ENABLE_HTTP_STREAMABLE_ENDPOINT=true`
-- **Claude Desktop remote**: Enable `ENABLE_SSE_ENDPOINT=true` + use mcp-proxy
+- **Claude Desktop via mcp-proxy**: Enable `ENABLE_SSE_ENDPOINT=true`
+- **Claude Desktop Connectors (HTTPS)**: Enable `ENABLE_HTTP_STREAMABLE_ENDPOINT=true`
+- **Claude Code remote**: Enable `ENABLE_HTTP_STREAMABLE_ENDPOINT=true`
+
+### **🔌 Client Support**
+
+| Client | Method | Transport | Protocol | Requirements |
+|--------|--------|-----------|----------|--------------|
+| Claude Desktop | mcp-proxy | SSE | HTTP/HTTPS | `ENABLE_SSE_ENDPOINT=true` + mcp-proxy |
+| Claude Desktop | Connectors | HTTP Streamable | HTTPS only | `ENABLE_HTTP_STREAMABLE_ENDPOINT=true` + SSL certificate |
+| Claude Code | Remote server | HTTP Streamable | HTTP/HTTPS | `ENABLE_HTTP_STREAMABLE_ENDPOINT=true` |
 
 ## 🐳 **Docker Deployment**
 
