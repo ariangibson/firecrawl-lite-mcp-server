@@ -1468,8 +1468,8 @@ async function runHTTPStreamableServer() {
           transport.close?.();
         });
         
-        await server.connect(transport);
         await transport.start();
+        await server.connect(transport);
       } catch (error) {
         console.error('SSE endpoint error:', error);
         res.status(500).json({ error: 'Failed to establish SSE connection' });
