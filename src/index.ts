@@ -818,19 +818,39 @@ Please provide the extracted data in JSON format. ${schema ? 'Ensure the respons
     }
     
   } catch (error) {
-    // SECURITY: Prevent information disclosure in error messages
+    // SECURITY: Prevent information disclosure in the message returned to the
+    // client, but log full detail to stderr so operators can actually debug.
     const isAxiosError = axios.isAxiosError(error);
     let safeErrorMessage = 'An error occurred while processing the request';
 
     if (isAxiosError) {
-      // Only expose safe error information
-      if (error.response?.status === 401) {
+      const status = error.response?.status;
+      // Server-side diagnostics (stderr only — never returned to the client).
+      const responseBody =
+        typeof error.response?.data === 'string'
+          ? error.response.data
+          : JSON.stringify(error.response?.data ?? {});
+      console.error(
+        `LLM extract_data request failed: status=${status ?? 'n/a'} code=${error.code ?? 'n/a'} body=${responseBody.slice(0, 800)}`
+      );
+
+      // HTTP status codes are not sensitive, so surface them to aid debugging.
+      if (status === 401) {
         safeErrorMessage = 'Authentication failed with LLM provider';
-      } else if (error.response?.status === 429) {
+      } else if (status === 429) {
         safeErrorMessage = 'Rate limit exceeded with LLM provider';
+      } else if (status === 400) {
+        safeErrorMessage =
+          'LLM provider rejected the request (HTTP 400) - check the model name and LLM_* tuning params';
       } else if (error.code === 'ECONNABORTED') {
         safeErrorMessage = 'Request timeout - LLM provider took too long to respond';
+      } else if (status) {
+        safeErrorMessage = `LLM provider returned an error (HTTP ${status})`;
+      } else {
+        safeErrorMessage = `LLM request failed (${error.code ?? 'network error'})`;
       }
+    } else {
+      console.error('extract_data unexpected error:', error);
     }
 
     return {
