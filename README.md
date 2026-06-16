@@ -221,12 +221,18 @@ pip install mcp-proxy
 
 ### Proxy
 
-Route browser traffic and LLM calls through an upstream proxy. A port range (e.g. `:10001-10010`) enables automatic rotation across ports.
+Route the scraping browser through an upstream proxy. A port range (e.g. `:10001-10010`) enables automatic rotation across ports.
 
 ```bash
 PROXY_SERVER_URL=http://proxy.example.com:10001-10010
 PROXY_SERVER_USERNAME=your-username
 PROXY_SERVER_PASSWORD=your-password
+```
+
+By default the proxy is used **only for scraping target sites** — LLM provider API calls go out directly. Routing your own LLM calls through a rotating (often residential) proxy is slower, can trip provider abuse detection, and may fail TLS. If you specifically need the LLM call proxied as well, opt in with:
+
+```bash
+PROXY_LLM_API=true
 ```
 
 ### Anti-detection and rate limiting

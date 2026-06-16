@@ -744,11 +744,12 @@ User Request: ${sanitizedPrompt}
 Please provide the extracted data in JSON format. ${schema ? 'Ensure the response matches the provided schema.' : 'Structure the data logically based on the content and request.'}
 `;
     
-    // Get proxy configuration for LLM API calls with rotation
-    const proxyUrl = getNextProxy();
+    // LLM API calls go out directly by default. Only use the (scraping) proxy
+    // for the LLM call when explicitly opted in via PROXY_LLM_API=true.
+    const proxyUrl = CONFIG.proxy.proxyLlmApi ? getNextProxy() : undefined;
     const proxyUsername = CONFIG.proxy.username;
     const proxyPassword = CONFIG.proxy.password;
-    
+
     // Build axios configuration
     const axiosConfig: any = {
       headers: {
@@ -756,7 +757,7 @@ Please provide the extracted data in JSON format. ${schema ? 'Ensure the respons
         'Content-Type': 'application/json'
       }
     };
-    
+
     // Add proxy configuration if available
     if (proxyUrl) {
       const proxyConfig: any = {
@@ -972,6 +973,11 @@ const CONFIG = {
     url: process.env.PROXY_SERVER_URL,
     username: process.env.PROXY_SERVER_USERNAME,
     password: process.env.PROXY_SERVER_PASSWORD,
+    // Proxies are for disguising scraper traffic to target sites. By default
+    // LLM provider API calls go out directly — routing them through a rotating
+    // (often residential) proxy is slower, flakier, and can fail TLS. Set
+    // PROXY_LLM_API=true only if you specifically need the LLM call proxied.
+    proxyLlmApi: process.env.PROXY_LLM_API === 'true',
   },
   endpoints: {
     enableHttpStreamableEndpoint: process.env.ENABLE_HTTP_STREAMABLE_ENDPOINT === 'true', // Default disabled for security
