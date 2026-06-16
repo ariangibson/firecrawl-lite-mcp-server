@@ -1,53 +1,69 @@
+<div align="center">
+
+<img src="docs/banner.png" alt="Firecrawl Lite MCP Server" width="100%" />
+
 # Firecrawl Lite MCP Server
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+**Privacy-first web scraping and data extraction for any MCP client — powered by local browser automation and your own LLM key.**
 
-A **privacy-first, standalone** MCP server that provides web scraping and data extraction tools using local browser automation and your own LLM API key. **No external dependencies or API keys required**
+[![npm version](https://img.shields.io/npm/v/@ariangibson/firecrawl-lite-mcp-server?logo=npm&color=cb3837)](https://www.npmjs.com/package/@ariangibson/firecrawl-lite-mcp-server)
+[![Docker Pulls](https://img.shields.io/docker/pulls/ariangibson/firecrawl-lite-mcp-server?logo=docker&logoColor=white)](https://hub.docker.com/r/ariangibson/firecrawl-lite-mcp-server)
+[![Image Size](https://img.shields.io/docker/image-size/ariangibson/firecrawl-lite-mcp-server/latest?logo=docker&logoColor=white&label=image%20size)](https://hub.docker.com/r/ariangibson/firecrawl-lite-mcp-server)
+[![Build](https://img.shields.io/github/actions/workflow/status/ariangibson/firecrawl-lite-mcp-server/docker-build.yml?branch=main&logo=github&label=build)](https://github.com/ariangibson/firecrawl-lite-mcp-server/actions/workflows/docker-build.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/ariangibson/firecrawl-lite-mcp-server/test.yml?branch=main&logo=github&label=tests)](https://github.com/ariangibson/firecrawl-lite-mcp-server/actions/workflows/test.yml)
+[![Node](https://img.shields.io/node/v/@ariangibson/firecrawl-lite-mcp-server?logo=node.js&logoColor=white)](https://nodejs.org)
+[![MCP](https://img.shields.io/badge/MCP-compatible-6E56CF)](https://modelcontextprotocol.io)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
-## 🎯 **What Makes Firecrawl Lite Special**
+</div>
 
-### **🔒 Privacy-First Architecture**
-- **Local Processing** - All web scraping and data extraction happens on your machine
-- **Your Data Stays Local** - Content is processed locally, not sent to third parties
-- **No External Service Lock-in** - Doesn't require a cloud API
-- **Complete Control** - You own your data and infrastructure
+---
 
-### **💰 Cost-Effective & Transparent**
-- **Pay Only for LLM Usage** - No additional subscription or API fees
-- **Your LLM Provider** - Compatible with OpenAI, xAI, Anthropic, Ollama, etc.
-- **Predictable Costs** - Transparent pricing based on your chosen LLM rates
+Firecrawl Lite is a standalone [Model Context Protocol](https://modelcontextprotocol.io) server that gives any MCP client — Claude Desktop, Claude Code, Cursor, and others — the ability to scrape web pages and extract structured data. Pages are fetched and rendered with a local, stealth-enabled headless browser, and structured extraction is performed by **your own LLM provider**. There is no Firecrawl account and no third-party scraping service in the loop: the only API key you bring is the one for the LLM you already use.
 
-### **⚡ Performance & Simplicity**
-- **Lightning-Fast Startup** - Lightweight design means quick initialization
-- **Single Container** - Simple deployment with Docker support
-- **Minimal Resource Usage** - Optimized for efficiency and low memory footprint
+## Contents
 
-## 🛠️ **Available Tools**
+- [Why Firecrawl Lite](#why-firecrawl-lite)
+- [Available Tools](#available-tools)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Remote Deployment](#remote-deployment)
+- [Advanced Configuration](#advanced-configuration)
+- [Usage Examples](#usage-examples)
+- [Troubleshooting](#troubleshooting)
+- [Container Images](#container-images)
+- [Development](#development)
+- [Credits](#credits)
+- [License](#license)
 
-### ✅ **`scrape_page`** - Extract content from a single webpage
-- **Use case**: Get webpage content for LLMs to read
-- **Parameters**: `url`, `onlyMainContent`
+## Why Firecrawl Lite
 
-### ✅ **`batch_scrape`** - Scrape multiple URLs in a single request
-- **Use case**: Process multiple pages efficiently
-- **Parameters**: `urls[]`, `onlyMainContent`
+**Privacy-first.** Scraping and rendering happen on your own machine or server. Page content is only ever sent to the LLM provider you explicitly configure — nothing is routed through a third-party scraping cloud.
 
-### ✅ **`extract_data`** - Extract structured data using LLM
-- **Use case**: Pull specific data from pages using natural language prompts
-- **Parameters**: `urls[]`, `prompt`, `enableWebSearch`
+**Bring your own model.** Works with any OpenAI-compatible `chat/completions` endpoint: OpenAI, xAI (Grok), Anthropic, OpenRouter, Synthetic, or a local model via Ollama. You pay only for the LLM tokens you use.
 
-### ✅ **`extract_with_schema`** - Extract data using JSON schema
-- **Use case**: Extract structured data with predefined schema
-- **Parameters**: `urls[]`, `schema`, `prompt`, `enableWebSearch`
+**Lightweight and self-contained.** A single Node.js process with a bundled headless browser. Run it locally over stdio, or deploy it as one container behind HTTP/SSE. Multi-architecture images (`amd64` / `arm64`) are published on every release.
 
-### ✅ **`screenshot`** - Take a screenshot of a webpage
-- **Use case**: Capture visual representation of pages
-- **Parameters**: `url`, `width`, `height`, `fullPage`
+**Built for real scraping.** Stealth browser automation, rotating user agents, configurable delays, optional upstream proxies (including port-range rotation), and tunable retry/backoff.
 
-## 🚀 **Quick Start (Recommended)**
+## Available Tools
 
-### **Claude Desktop**
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+| Tool | Description | Required params | Optional params |
+| --- | --- | --- | --- |
+| `scrape_page` | Fetch and render a single page, returning clean text/markdown. | `url` | `onlyMainContent` |
+| `batch_scrape` | Scrape multiple URLs in one request (up to 10). | `urls[]` | `onlyMainContent` |
+| `extract_data` | Extract structured data from pages using a natural-language prompt and your LLM. | `urls[]`, `prompt` | `enableWebSearch` |
+| `extract_with_schema` | Extract data conforming to a supplied JSON Schema. | `urls[]`, `schema` | `prompt`, `enableWebSearch` |
+| `screenshot` | Capture a screenshot of a page via the stealth browser. | `url` | `width`, `height`, `fullPage` |
+
+## Quick Start
+
+The fastest way to use Firecrawl Lite locally is over stdio via `npx` — no install or container required. Add the LLM credentials for the provider of your choice (see [LLM provider examples](#llm-provider-examples)).
+
+### Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
 ```json
 {
   "mcpServers": {
@@ -64,13 +80,19 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-### **Claude Code (CLI)**
+### Claude Code (CLI)
+
 ```bash
-claude mcp add firecrawl-lite npx -- -y @ariangibson/firecrawl-lite-mcp-server --env LLM_API_KEY=your_key --env LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 --env LLM_MODEL=grok-code-fast-1
+claude mcp add firecrawl-lite npx -- -y @ariangibson/firecrawl-lite-mcp-server \
+  --env LLM_API_KEY=your_key \
+  --env LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 \
+  --env LLM_MODEL=grok-code-fast-1
 ```
 
-### **Cursor**
-Add to your Cursor MCP configuration:
+### Cursor
+
+Add to your Cursor MCP configuration (`~/.cursor/mcp.json`):
+
 ```json
 {
   "mcpServers": {
@@ -87,87 +109,103 @@ Add to your Cursor MCP configuration:
 }
 ```
 
-## ⚙️ **Configuration**
+## Configuration
 
-### **Required Environment Variables**
-```bash
-# Your LLM API key (xAI, OpenAI, Anthropic, etc.)
-LLM_API_KEY=your_api_key_here
+All configuration is via environment variables. Only the three LLM variables are required; everything else has sensible defaults.
 
-# LLM provider base URL
-LLM_PROVIDER_BASE_URL=https://api.x.ai/v1
+### Required
 
-# LLM model name
-LLM_MODEL=grok-code-fast-1
-```
+| Variable | Description |
+| --- | --- |
+| `LLM_API_KEY` | API key for your LLM provider. |
+| `LLM_PROVIDER_BASE_URL` | Base URL of an OpenAI-compatible API (the server calls `{base_url}/chat/completions`). |
+| `LLM_MODEL` | Model name to use for extraction. |
 
-### **Optional LLM Tuning**
-These are passed straight through to the provider's `chat/completions` request. Leave any of them unset to use the default (or omit the parameter entirely):
-```bash
-LLM_REASONING_EFFORT=high   # Reasoning effort for reasoning models (omitted if unset)
-LLM_MAX_TOKENS=2000         # Max tokens in the response (default: 2000)
-LLM_TEMPERATURE=0.1         # Sampling temperature (default: 0.1)
-LLM_TOP_P=0.95              # Nucleus sampling top_p (omitted if unset)
-```
+### Optional LLM tuning
 
-### **LLM Provider Examples**
+These are passed straight through to the provider's `chat/completions` request. Leave any of them unset to use the default; the optional sampling parameters are omitted from the request entirely when unset.
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `LLM_TEMPERATURE` | `0.1` | Sampling temperature. |
+| `LLM_MAX_TOKENS` | `2000` | Maximum tokens in the response. Raise this if extractions are being truncated. |
+| `LLM_TOP_P` | _unset_ | Nucleus sampling; omitted from the request unless set. |
+| `LLM_REASONING_EFFORT` | _unset_ | `reasoning_effort` for reasoning-capable models; omitted unless set. |
+
+### LLM provider examples
+
 ```bash
 # xAI (Grok)
 LLM_PROVIDER_BASE_URL=https://api.x.ai/v1
-LLM_API_KEY=xai-your-key-here
 LLM_MODEL=grok-code-fast-1
 
 # OpenAI
 LLM_PROVIDER_BASE_URL=https://api.openai.com/v1
-LLM_API_KEY=sk-your-key-here
 LLM_MODEL=gpt-4o-mini
 
 # Anthropic
 LLM_PROVIDER_BASE_URL=https://api.anthropic.com
-LLM_API_KEY=sk-ant-your-key-here
 LLM_MODEL=claude-3-haiku-20240307
 
-# Local LLM (Ollama)
+# OpenRouter
+LLM_PROVIDER_BASE_URL=https://openrouter.ai/api/v1
+LLM_MODEL=openai/gpt-4o-mini
+
+# Local (Ollama)
 LLM_PROVIDER_BASE_URL=http://localhost:11434/v1
-LLM_API_KEY=your-local-key
-LLM_MODEL=llama2
+LLM_MODEL=llama3.1
 ```
 
-## 🌐 **Remote Deployment**
+See [`.env.example`](.env.example) for the full, annotated list of variables.
 
-For remote servers or Docker deployments, be sure to enable at least one of the HTTP endpoints (depending on which transport protocol you are planning to use) - these are not enabled by default:
+## Remote Deployment
 
-### **Docker**
+For remote or containerized use, enable at least one HTTP transport — **both are disabled by default** for security. Choose based on your client:
+
+- `ENABLE_HTTP_STREAMABLE_ENDPOINT=true` → exposes `/mcp` (Claude Code, modern remote MCP clients).
+- `ENABLE_SSE_ENDPOINT=true` → exposes `/sse` (Claude Desktop via `mcp-proxy`).
+
+A `/health` endpoint is always available for health checks.
+
+### Docker
+
 ```bash
 docker run -d \
   -p 3000:3000 \
   -e ENABLE_HTTP_STREAMABLE_ENDPOINT=true \
-  -e ENABLE_SSE_ENDPOINT=true \
   -e LLM_API_KEY=your_key_here \
   -e LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 \
   -e LLM_MODEL=grok-code-fast-1 \
   ariangibson/firecrawl-lite-mcp-server:latest
 ```
 
-### **Claude Code (Remote)**
+### Docker Compose / Portainer / Swarm
+
+A ready-to-use [`docker-compose.yml`](docker-compose.yml) is included. Set your variables in a `.env` file and deploy:
+
+```bash
+docker compose up -d
+```
+
+> **Note for Docker Swarm / Portainer:** the published image is `node:20-alpine`, which does **not** include `curl`. The bundled compose file uses a `wget`-based health check for this reason — see [Troubleshooting](#container-keeps-restarting-or-is-killed-with-sigterm) if you have customized it.
+
+### Remote client configuration
+
+**Claude Code (Streamable HTTP):**
+
 ```bash
 claude mcp add firecrawl-lite-remote http://your-server:3000/mcp -t http
 ```
 
-### **Claude Desktop (Remote)**
+**Claude Desktop — Connectors (recommended, HTTPS only):**
+Settings → Connectors → add `https://your-server.com:3000/mcp`. Requires a valid TLS certificate.
 
-**Method 1: Connectors (Recommended - HTTPS only)**
-The official Claude Desktop method for remote MCP servers:
-- Go to Claude Desktop → Settings → Connectors
-- Add connector: `https://your-server.com:3000/mcp`
-- **Requires**: HTTPS server with valid SSL certificate
+**Claude Desktop — `mcp-proxy` (HTTP fallback, no certificate):**
 
-**Method 2: mcp-proxy (HTTP/HTTPS fallback)**
-For servers without SSL certificates:
 ```bash
 pip install mcp-proxy
 ```
-Add to claude_desktop_config.json:
+
 ```json
 {
   "mcpServers": {
@@ -179,77 +217,51 @@ Add to claude_desktop_config.json:
 }
 ```
 
-## 🛠️ **Advanced Configuration**
+## Advanced Configuration
 
-### **Proxy Support**
+### Proxy
+
+Route browser traffic and LLM calls through an upstream proxy. A port range (e.g. `:10001-10010`) enables automatic rotation across ports.
+
 ```bash
-PROXY_SERVER_URL=http://your-proxy-server.com:1337
+PROXY_SERVER_URL=http://proxy.example.com:10001-10010
 PROXY_SERVER_USERNAME=your-username
 PROXY_SERVER_PASSWORD=your-password
 ```
 
-### **Anti-Detection**
-```bash
-SCRAPE_USER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.3"
-SCRAPE_DELAY_MIN=1000
-SCRAPE_DELAY_MAX=3000
-```
+### Anti-detection and rate limiting
 
-### **Performance Tuning**
+`SCRAPE_USER_AGENT` accepts either a single string or a JSON array of strings to rotate through. When using a JSON array, keep it on a single line.
+
 ```bash
+SCRAPE_USER_AGENT=["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ... Safari/537.36","Mozilla/5.0 (Windows NT 10.0; Win64; x64) ... Safari/537.36"]
 SCRAPE_VIEWPORT_WIDTH=1920
 SCRAPE_VIEWPORT_HEIGHT=1080
-SCRAPE_BATCH_DELAY_MIN=2000
-SCRAPE_BATCH_DELAY_MAX=5000
+SCRAPE_DELAY_MIN=1000          # min delay before navigation (ms)
+SCRAPE_DELAY_MAX=3000          # max delay before navigation (ms)
+SCRAPE_BATCH_DELAY_MIN=2000    # min delay between batch requests (ms)
+SCRAPE_BATCH_DELAY_MAX=5000    # max delay between batch requests (ms)
 ```
 
-## 🛠️ **Troubleshooting**
+### Retry and backoff
 
-### **Chrome Issues**
-Chrome is automatically installed on first use. If you encounter issues:
 ```bash
-# Manual installation
-npx puppeteer browsers install chrome
-
-# Reset if corrupted
-rm -rf ~/.cache/puppeteer && npx puppeteer browsers install chrome
+FIRECRAWL_RETRY_MAX_ATTEMPTS=3
+FIRECRAWL_RETRY_INITIAL_DELAY=1000
+FIRECRAWL_RETRY_MAX_DELAY=10000
+FIRECRAWL_RETRY_BACKOFF_FACTOR=2
 ```
 
-### **Connection Issues**
-- Verify internet connectivity
-- Check LLM provider URL accessibility
-- Ensure API keys are valid
-- For corporate networks, configure proxy settings
+## Usage Examples
 
-### **Container keeps restarting / killed with `SIGTERM` (Docker Swarm)**
-If the logs show the server start up (`listening on port 3000`) and then exit with
-`npm error signal SIGTERM`, the container is being killed by a failing healthcheck —
-not by the app itself. The published image is `node:20-alpine`, which does **not**
-include `curl`, so a `curl`-based healthcheck always fails and Swarm restarts the
-task in a loop. Use a `wget`-based check instead (busybox ships `wget`):
-```yaml
-healthcheck:
-  test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1"]
-  interval: 30s
-  timeout: 10s
-  retries: 3
-  start_period: 40s
-```
-The bundled `docker-compose.yml` already uses this form.
+**Scrape a page**
 
-## 📊 **Usage Examples**
-
-### Scrape a webpage
 ```json
-{
-  "name": "scrape_page",
-  "arguments": {
-    "url": "https://example.com"
-  }
-}
+{ "name": "scrape_page", "arguments": { "url": "https://example.com" } }
 ```
 
-### Batch scrape multiple URLs
+**Batch scrape**
+
 ```json
 {
   "name": "batch_scrape",
@@ -260,18 +272,20 @@ The bundled `docker-compose.yml` already uses this form.
 }
 ```
 
-### Extract data with prompt
+**Extract with a prompt**
+
 ```json
 {
   "name": "extract_data",
   "arguments": {
     "urls": ["https://example.com"],
-    "prompt": "Extract the main article title and summary"
+    "prompt": "Extract the main article title and a one-sentence summary."
   }
 }
 ```
 
-### Extract with schema
+**Extract with a JSON Schema**
+
 ```json
 {
   "name": "extract_with_schema",
@@ -280,38 +294,78 @@ The bundled `docker-compose.yml` already uses this form.
     "schema": {
       "type": "object",
       "properties": {
-        "title": {"type": "string"},
-        "description": {"type": "string"}
+        "title": { "type": "string" },
+        "description": { "type": "string" }
       }
     }
   }
 }
 ```
 
-## 🐳 **Container Registries**
+## Troubleshooting
 
-Pre-built images are available:
+### Chrome / Chromium issues
 
-**Docker Hub**: `ariangibson/firecrawl-lite-mcp-server:latest`  
-**GitHub Container Registry**: `ghcr.io/ariangibson/firecrawl-lite-mcp-server:latest`
+The local image bundles Chromium. For the `npx` install, Chrome is downloaded on first use. If it fails:
 
-Both support multi-architecture (`amd64`, `arm64`) with automatic updates.
+```bash
+npx puppeteer browsers install chrome
+# or reset a corrupted install
+rm -rf ~/.cache/puppeteer && npx puppeteer browsers install chrome
+```
 
-## 🙏 **Credits & Acknowledgments**
+### Extraction returns an error
 
-This project is inspired by the excellent work of the original Firecrawl projects:
+`scrape_page` working but `extract_data` failing points to the LLM call rather than scraping. The server logs the upstream status, error code, and response body to stderr (`LLM extract_data request failed: ...`) and surfaces the HTTP status in the tool result. Common causes:
 
-### 🔥 **[Firecrawl](https://firecrawl.com)**
-The original Firecrawl project by **Mendable.ai** - a comprehensive web scraping platform with advanced features.
+- **HTTP 401** — invalid `LLM_API_KEY`.
+- **HTTP 400** — wrong `LLM_MODEL`, or a tuning parameter the model rejects (e.g. `LLM_MAX_TOKENS` above the model's limit, or `LLM_REASONING_EFFORT` on a non-reasoning model).
+- **HTTP 429** — provider rate limit.
 
-### 🔥 **[Firecrawl MCP Server](https://github.com/firecrawl/firecrawl-mcp-server)**
-The official MCP server implementation by the Firecrawl team.
+### Container keeps restarting or is killed with `SIGTERM`
 
-**We give huge thanks to the Firecrawl team for their pioneering work in web scraping and MCP integration!** 🚀
+If the logs show the server start (`listening on port 3000`) and then exit with `npm error signal SIGTERM`, the container is being killed by a **failing health check**, not by the app. The `node:20-alpine` image does not include `curl`, so a `curl`-based health check always fails and Swarm restarts the task in a loop. Use a `wget`-based check (busybox provides `wget`):
 
-> **💡 Looking for enterprise-grade web scraping?**  
-> Visit **[firecrawl.com](https://firecrawl.com)** for their cloud service with zero setup complexity.
+```yaml
+healthcheck:
+  test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+```
 
-## 📝 **License**
+The bundled `docker-compose.yml` already uses this form.
 
-MIT License - see [LICENSE](LICENSE) for details.
+## Container Images
+
+Pre-built, multi-architecture (`amd64`, `arm64`) images are published automatically on every push to `main` and on release:
+
+- **Docker Hub:** `ariangibson/firecrawl-lite-mcp-server:latest`
+- **GitHub Container Registry:** `ghcr.io/ariangibson/firecrawl-lite-mcp-server:latest`
+
+## Development
+
+```bash
+npm install        # install dependencies
+npm run build      # compile TypeScript to dist/
+npm run lint       # type-check without emitting
+npm test           # run the unit test suite
+npm start          # run the built server
+```
+
+Unit tests cover the pure helpers in `src/utils.ts` (URL validation, proxy/user-agent parsing, and LLM request construction) and run in CI against Node 18, 20, and 22. A manual end-to-end smoke test against a running SSE deployment is available at [`tests/live-smoke.mjs`](tests/live-smoke.mjs):
+
+```bash
+node tests/live-smoke.mjs http://your-server:3000
+```
+
+## Credits
+
+Inspired by the excellent work of the [Firecrawl](https://firecrawl.com) team at Mendable.ai and their official [Firecrawl MCP Server](https://github.com/firecrawl/firecrawl-mcp-server). Firecrawl Lite is an independent, self-hosted take on the same idea — huge thanks to them for pioneering web scraping for the MCP ecosystem.
+
+Looking for a fully managed, enterprise-grade scraping platform? Check out [firecrawl.com](https://firecrawl.com).
+
+## License
+
+MIT — see [LICENSE](LICENSE).
