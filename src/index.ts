@@ -903,6 +903,19 @@ function isExtractOptions(args: unknown): args is { urls: string[]; prompt: stri
   );
 }
 
+// For schema-based extraction the prompt is optional (the schema drives it).
+function isExtractWithSchemaOptions(args: unknown): args is { urls: string[]; schema: any; prompt?: string; enableWebSearch?: boolean } {
+  return (
+    typeof args === 'object' &&
+    args !== null &&
+    'urls' in args &&
+    'schema' in args &&
+    Array.isArray((args as { urls: unknown }).urls) &&
+    (args as { schema: unknown }).schema != null &&
+    typeof (args as { schema: unknown }).schema === 'object'
+  );
+}
+
 // Remove all complex tools - keep only essential ones above
 
 // Server implementation
@@ -1198,8 +1211,8 @@ server.setRequestHandler(
         }
 
         case 'extract_with_schema': {
-          if (!isExtractOptions(args) || !args.schema) {
-            throw new Error('Invalid arguments for extract_with_schema: urls array, schema, and prompt required');
+          if (!isExtractWithSchemaOptions(args)) {
+            throw new Error('Invalid arguments for extract_with_schema: urls array and schema object are required');
           }
 
           // Security validations
@@ -1230,16 +1243,18 @@ server.setRequestHandler(
             sanitizedUrls.push(sanitizedUrl);
           }
 
-          // Validate and sanitize prompt
-          if (typeof args.prompt !== 'string') {
-            throw new Error('Invalid prompt: must be a string');
+          // Prompt is optional for schema-based extraction; the schema drives
+          // the extraction. Validate it only if the caller supplied one.
+          let sanitizedPrompt = 'Extract data matching the provided JSON schema.';
+          if (args.prompt !== undefined) {
+            if (typeof args.prompt !== 'string') {
+              throw new Error('Invalid prompt: must be a string');
+            }
+            if (!validatePrompt(args.prompt)) {
+              throw new Error('Invalid prompt: must be between 1 and 10,000 characters');
+            }
+            sanitizedPrompt = args.prompt.trim();
           }
-
-          if (!validatePrompt(args.prompt)) {
-            throw new Error('Invalid prompt: must be between 1 and 10,000 characters');
-          }
-
-          const sanitizedPrompt = args.prompt.trim();
 
           // Validate schema (basic validation)
           if (typeof args.schema !== 'object' || args.schema === null) {
