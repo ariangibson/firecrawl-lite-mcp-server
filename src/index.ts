@@ -913,7 +913,7 @@ function isExtractWithSchemaOptions(args: unknown): args is { urls: string[]; sc
 const server = new Server(
   {
     name: 'firecrawl-lite-mcp-server',
-    version: '1.2.0',
+    version: '1.3.0',
   },
   {
     capabilities: {
@@ -1362,7 +1362,7 @@ async function runHTTPStreamableServer() {
     res.status(200).json({
       status: 'OK',
       server: 'Firecrawl Lite MCP Server',
-      version: '1.2.0',
+      version: '1.3.0',
       timestamp: new Date().toISOString(),
       endpoints: {
         mcp: CONFIG.endpoints.enableHttpStreamableEndpoint ? 'enabled' : 'disabled',

@@ -247,7 +247,12 @@ SCRAPE_DELAY_MIN=1000          # min delay before navigation (ms)
 SCRAPE_DELAY_MAX=3000          # max delay before navigation (ms)
 SCRAPE_BATCH_DELAY_MIN=2000    # min delay between batch requests (ms)
 SCRAPE_BATCH_DELAY_MAX=5000    # max delay between batch requests (ms)
+SCRAPE_SETTLE_MAX_MS=3000      # max wait for the DOM to stop changing after load (ms); raise for slow JS sites
 ```
+
+After load the scraper scrolls to trigger lazy/AJAX content and waits for the
+DOM to settle (exiting early once stable). Pages that inject content via a long
+`setTimeout` may need a higher `SCRAPE_SETTLE_MAX_MS`.
 
 ### Retry and backoff
 
@@ -360,11 +365,7 @@ npm test           # run the unit test suite
 npm start          # run the built server
 ```
 
-Unit tests cover the pure helpers in `src/utils.ts` (URL validation, proxy/user-agent parsing, and LLM request construction) and run in CI against Node 18, 20, and 22. A manual end-to-end smoke test against a running SSE deployment is available at [`tests/live-smoke.mjs`](tests/live-smoke.mjs):
-
-```bash
-node tests/live-smoke.mjs http://your-server:3000
-```
+Unit tests cover the pure helpers in `src/utils.ts` (URL validation, proxy/user-agent parsing, LLM request construction) and `src/htmlToMarkdown.ts` (HTML cleaning and Markdown conversion), and run in CI against Node 18, 20, and 22.
 
 ## Credits
 
