@@ -94,6 +94,14 @@ test('onlyMainContent scopes to the dominant semantic container', () => {
   assert.doesNotMatch(md, /footer junk/);
 });
 
+test('htmlToMarkdown recovers lazy-loaded images from data-src', () => {
+  const html =
+    '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="/real/photo.jpg" alt="photo">';
+  const md = htmlToMarkdown(html, { baseUrl: 'https://example.com' });
+  assert.match(md, /https:\/\/example\.com\/real\/photo\.jpg/);
+  assert.doesNotMatch(md, /data:image/);
+});
+
 test('tidy removes empty links and images', () => {
   const html = '<p>Text <a href="">empty</a> <a href="/ok">ok</a></p>';
   const md = htmlToMarkdown(html, { baseUrl: 'https://example.com' });

@@ -124,6 +124,22 @@ function clean(html: string, options: CleanOptions) {
 
   $(STRIP_SELECTORS.join(',')).remove();
 
+  // Recover lazy-loaded images: many sites put a placeholder in src and the
+  // real URL in a data-* attribute. Promote it before the base64 cull below.
+  $('img').each((_, el) => {
+    const $img = $(el);
+    const src = $img.attr('src');
+    const lazy =
+      $img.attr('data-src') ||
+      $img.attr('data-original') ||
+      $img.attr('data-lazy-src') ||
+      $img.attr('data-lazy') ||
+      $img.attr('data-srcset')?.split(',')[0]?.trim().split(' ')[0];
+    if ((!src || src.startsWith('data:')) && lazy) {
+      $img.attr('src', lazy);
+    }
+  });
+
   // Drop inline base64 / data-URI images — they bloat the output enormously
   // and carry no value for an LLM reader.
   $('img[src^="data:"]').remove();
