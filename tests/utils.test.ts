@@ -12,6 +12,7 @@ import {
   parseUserAgents,
   parseLlmConfig,
   buildLlmRequestBody,
+  parseLlmJson,
 } from '../src/utils.js';
 
 test('isValidUrl accepts http and https', () => {
@@ -136,6 +137,28 @@ test('buildLlmRequestBody includes defaults and omits unset optionals', () => {
   assert.equal(body.max_tokens, DEFAULT_LLM_MAX_TOKENS);
   assert.equal('top_p' in body, false);
   assert.equal('reasoning_effort' in body, false);
+});
+
+test('parseLlmJson parses plain JSON', () => {
+  assert.deepEqual(parseLlmJson('{"a":1,"b":"x"}'), { a: 1, b: 'x' });
+});
+
+test('parseLlmJson strips a ```json code fence', () => {
+  const fenced = '```json\n{\n  "title": "Example Domain"\n}\n```';
+  assert.deepEqual(parseLlmJson(fenced), { title: 'Example Domain' });
+});
+
+test('parseLlmJson strips a bare ``` code fence', () => {
+  assert.deepEqual(parseLlmJson('```\n[1, 2, 3]\n```'), [1, 2, 3]);
+});
+
+test('parseLlmJson recovers a JSON object embedded in prose', () => {
+  const text = 'Here is the data you requested:\n{"k": "v"}\nHope that helps!';
+  assert.deepEqual(parseLlmJson(text), { k: 'v' });
+});
+
+test('parseLlmJson throws when there is no JSON', () => {
+  assert.throws(() => parseLlmJson('sorry, I could not find anything'));
 });
 
 test('buildLlmRequestBody includes optional tuning params when set', () => {

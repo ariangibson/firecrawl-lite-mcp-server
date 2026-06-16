@@ -116,6 +116,31 @@ export function parseLlmConfig(
   };
 }
 
+// Parse the JSON object an LLM returns, tolerating common formatting quirks:
+// markdown code fences (```json ... ```), surrounding prose, and leading/
+// trailing whitespace. Throws if no valid JSON can be recovered.
+export function parseLlmJson(text: string): unknown {
+  const trimmed = text.trim();
+
+  // Strip a wrapping markdown code fence if present (```json ... ``` or ``` ... ```).
+  const fenceMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  const unfenced = fenceMatch ? fenceMatch[1].trim() : trimmed;
+
+  try {
+    return JSON.parse(unfenced);
+  } catch {
+    // Fall back to the first balanced {...} or [...] span in the text.
+    const start = unfenced.search(/[{[]/);
+    const lastObj = unfenced.lastIndexOf('}');
+    const lastArr = unfenced.lastIndexOf(']');
+    const end = Math.max(lastObj, lastArr);
+    if (start !== -1 && end > start) {
+      return JSON.parse(unfenced.slice(start, end + 1));
+    }
+    throw new Error('No valid JSON found in LLM response');
+  }
+}
+
 // Build the chat-completions request body, only including optional tuning
 // parameters when they have been explicitly configured.
 export function buildLlmRequestBody(

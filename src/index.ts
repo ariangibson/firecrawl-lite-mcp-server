@@ -29,6 +29,7 @@ import {
   parseUserAgents,
   parseLlmConfig,
   buildLlmRequestBody,
+  parseLlmJson,
 } from './utils.js';
 
 dotenv.config();
@@ -801,16 +802,16 @@ Please provide the extracted data in JSON format. ${schema ? 'Ensure the respons
     
     const llmResponse = response.data.choices[0].message.content;
     
-    // Try to parse JSON from the response
+    // Parse JSON from the response, tolerating markdown code fences and prose.
     try {
-      const extractedData = JSON.parse(llmResponse);
+      const extractedData = parseLlmJson(llmResponse);
       return {
         url,
         data: extractedData,
         success: true
       };
     } catch (parseError) {
-      // If JSON parsing fails, return the raw response
+      // If no JSON can be recovered, return the raw response
       return {
         url,
         data: { raw_response: llmResponse },
