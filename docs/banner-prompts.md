@@ -1,7 +1,9 @@
 # Banner image prompts (Nano Banana Pro / Gemini 3 Pro Image)
 
 Generate at a wide **3:1 aspect ratio** (e.g. 1500×500, or 2400×800 for retina).
-Save the chosen result as `docs/banner.png` — the README references it at the top.
+Save the chosen result as `docs/banner.jpg` — the README references it at the top.
+(Use JPG; a full-res PNG can be many MB. If you change the extension, update the
+`<img src>` in the README to match.)
 
 Each prompt renders the title text directly in the banner. If you prefer a
 text-free graphic, delete the "Render the text…" sentence and keep the H1 in

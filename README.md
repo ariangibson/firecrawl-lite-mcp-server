@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/banner.png" alt="Firecrawl Lite MCP Server" width="100%" />
+<img src="docs/banner.jpg" alt="Firecrawl Lite MCP Server" width="100%" />
 
 # Firecrawl Lite MCP Server
 
