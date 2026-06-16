@@ -5,7 +5,10 @@
 // NOT copy code from the AGPL-licensed Firecrawl project — only well-known,
 // standard techniques.
 
-import { load } from 'cheerio';
+// Use cheerio's slim build: it excludes the undici-based `fromURL` helper
+// (which we don't use). The full build pulls undici, which references the
+// `File` global and crashes on Node < 20 at import time.
+import { load } from 'cheerio/slim';
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
 
