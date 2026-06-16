@@ -102,6 +102,20 @@ test('htmlToMarkdown recovers lazy-loaded images from data-src', () => {
   assert.doesNotMatch(md, /data:image/);
 });
 
+test('tidy removes empty headings and stray image markers', () => {
+  const html = '<h2></h2><p>Real text</p><img src="" alt=""><h3>   </h3>';
+  const md = htmlToMarkdown(html);
+  assert.doesNotMatch(md, /^#{1,6}\s*$/m); // no empty headings
+  assert.doesNotMatch(md, /^!+\s*$/m); // no lone image markers
+  assert.match(md, /Real text/);
+});
+
+test('tidy preserves bracket characters inside code blocks', () => {
+  const html = '<pre><code>const a = [\n  1,\n  2,\n];</code></pre>';
+  const md = htmlToMarkdown(html);
+  assert.match(md, /\[\n\s+1,/); // array literal newline kept intact
+});
+
 test('tidy removes empty links and images', () => {
   const html = '<p>Text <a href="">empty</a> <a href="/ok">ok</a></p>';
   const md = htmlToMarkdown(html, { baseUrl: 'https://example.com' });

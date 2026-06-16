@@ -148,6 +148,10 @@ function clean(html: string, options: CleanOptions) {
   $('img[src^="data:"]').remove();
   $('img[srcset^="data:"]').removeAttr('srcset');
 
+  // Drop images with no usable source (icons/placeholders) so they don't leave
+  // stray "!" markers in the output.
+  $('img:not([src]), img[src=""]').remove();
+
   // Flatten layout tables (no <th> header row, or role="presentation"). The GFM
   // plugin only converts true data tables and leaves the rest as raw HTML, so
   // we collapse non-data tables to plain divs to keep that HTML out of the
@@ -231,6 +235,8 @@ function tidyMarkdown(md: string): string {
     .replace(/!\[[^\]]*\]\(\s*\)/g, '') // images with empty src
     .replace(/\[\s*\]\([^)]*\)/g, '') // links with empty text
     .replace(/\[([^\]]+)\]\(\s*\)/g, '$1') // links with empty href -> text
+    .replace(/^[ \t]*!+[ \t]*$/gm, '') // stray image markers left on their own line
+    .replace(/^#{1,6}[ \t]*$/gm, '') // empty headings
     .replace(/[ \t]+$/gm, '') // trailing whitespace
     .replace(/\n{3,}/g, '\n\n') // collapse blank lines
     .trim();

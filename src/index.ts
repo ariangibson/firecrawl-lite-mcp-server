@@ -435,6 +435,34 @@ async function screenshotWebpageWithProxy(url: string, width: number = 1920, hei
   }
 }
 
+// Poll until the rendered text stops growing (or maxWaitMs elapses), so pages
+// that inject content after load — setTimeout, XHR/AJAX, lazy hydration — are
+// captured. Fast/static pages return after the first couple of stable reads.
+async function waitForContentToSettle(page: any, maxWaitMs: number): Promise<void> {
+  const intervalMs = 600;
+  const requiredStableReads = 2;
+  let lastLength = -1;
+  let stableReads = 0;
+  const start = Date.now();
+
+  while (Date.now() - start < maxWaitMs) {
+    let length = 0;
+    try {
+      length = await page.evaluate(() => document.body?.innerText?.length || 0);
+    } catch {
+      break; // navigation/detached — stop waiting
+    }
+
+    if (length === lastLength) {
+      if (++stableReads >= requiredStableReads) return;
+    } else {
+      stableReads = 0;
+      lastLength = length;
+    }
+    await new Promise(resolve => setTimeout(resolve, intervalMs));
+  }
+}
+
 // Smart proxy failover wrapper with 3-attempt retry logic
 async function scrapeWebpage(url: string, onlyMainContent: boolean = true): Promise<ScrapedContent> {
   const maxAttempts = 3;
@@ -593,23 +621,18 @@ async function scrapeWebpageWithProxy(url: string, onlyMainContent: boolean = tr
     const humanDelay = Math.floor(Math.random() * 3000) + 2000;
     await new Promise(resolve => setTimeout(resolve, humanDelay));
     
-    // Simulate human scrolling behavior
-    await page.evaluate(() => {
-      // Scroll a bit like a human would
-      window.scrollBy(0, Math.floor(Math.random() * 300) + 100);
-    });
-    
-    // Another small delay
+    // Scroll to the bottom to trigger lazy-loaded / scroll-triggered content,
+    // then back up (also looks human-like).
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 1000) + 500));
-    
-    // Scroll back up slightly
-    await page.evaluate(() => {
-      window.scrollBy(0, -Math.floor(Math.random() * 100) - 50);
-    });
-    
-    // Final wait for any dynamic content
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    await page.evaluate(() => window.scrollTo(0, 0));
+
+    // Wait for the DOM to stabilize. This adapts to delayed-JS pages (content
+    // injected via setTimeout/XHR after load) without slowing fast pages: a
+    // stable page exits in ~1-2s, while late content resets the timer until it
+    // settles or we hit the cap.
+    await waitForContentToSettle(page, 8000);
+
     // Extract title
     const title = await page.title();
 
