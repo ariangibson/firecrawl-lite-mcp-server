@@ -72,8 +72,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
       "args": ["-y", "@ariangibson/firecrawl-lite-mcp-server"],
       "env": {
         "LLM_API_KEY": "your_llm_api_key_here",
-        "LLM_PROVIDER_BASE_URL": "https://api.x.ai/v1",
-        "LLM_MODEL": "grok-code-fast-1"
+        "LLM_PROVIDER_BASE_URL": "https://api.openai.com/v1",
+        "LLM_MODEL": "gpt-5.5"
       }
     }
   }
@@ -85,8 +85,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 ```bash
 claude mcp add firecrawl-lite npx -- -y @ariangibson/firecrawl-lite-mcp-server \
   --env LLM_API_KEY=your_key \
-  --env LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 \
-  --env LLM_MODEL=grok-code-fast-1
+  --env LLM_PROVIDER_BASE_URL=https://api.openai.com/v1 \
+  --env LLM_MODEL=gpt-5.5
 ```
 
 ### Cursor
@@ -101,8 +101,8 @@ Add to your Cursor MCP configuration (`~/.cursor/mcp.json`):
       "args": ["-y", "@ariangibson/firecrawl-lite-mcp-server"],
       "env": {
         "LLM_API_KEY": "your_llm_api_key_here",
-        "LLM_PROVIDER_BASE_URL": "https://api.x.ai/v1",
-        "LLM_MODEL": "grok-code-fast-1"
+        "LLM_PROVIDER_BASE_URL": "https://api.openai.com/v1",
+        "LLM_MODEL": "gpt-5.5"
       }
     }
   }
@@ -135,25 +135,25 @@ These are passed straight through to the provider's `chat/completions` request. 
 ### LLM provider examples
 
 ```bash
-# xAI (Grok)
-LLM_PROVIDER_BASE_URL=https://api.x.ai/v1
-LLM_MODEL=grok-code-fast-1
-
 # OpenAI
 LLM_PROVIDER_BASE_URL=https://api.openai.com/v1
-LLM_MODEL=gpt-4o-mini
+LLM_MODEL=gpt-5.5
+
+# xAI (Grok)
+LLM_PROVIDER_BASE_URL=https://api.x.ai/v1
+LLM_MODEL=grok-4
 
 # Anthropic
-LLM_PROVIDER_BASE_URL=https://api.anthropic.com
-LLM_MODEL=claude-3-haiku-20240307
+LLM_PROVIDER_BASE_URL=https://api.anthropic.com/v1
+LLM_MODEL=claude-haiku-4-5
 
 # OpenRouter
 LLM_PROVIDER_BASE_URL=https://openrouter.ai/api/v1
-LLM_MODEL=openai/gpt-4o-mini
+LLM_MODEL=openai/gpt-5.5
 
 # Local (Ollama)
 LLM_PROVIDER_BASE_URL=http://localhost:11434/v1
-LLM_MODEL=llama3.1
+LLM_MODEL=llama3.3
 ```
 
 See [`.env.example`](.env.example) for the full, annotated list of variables.
@@ -174,8 +174,8 @@ docker run -d \
   -p 3000:3000 \
   -e ENABLE_HTTP_STREAMABLE_ENDPOINT=true \
   -e LLM_API_KEY=your_key_here \
-  -e LLM_PROVIDER_BASE_URL=https://api.x.ai/v1 \
-  -e LLM_MODEL=grok-code-fast-1 \
+  -e LLM_PROVIDER_BASE_URL=https://api.openai.com/v1 \
+  -e LLM_MODEL=gpt-5.5 \
   ariangibson/firecrawl-lite-mcp-server:latest
 ```
 
