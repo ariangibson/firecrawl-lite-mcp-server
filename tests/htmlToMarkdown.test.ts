@@ -57,3 +57,46 @@ test('htmlToMarkdown handles empty/whitespace input', () => {
   assert.equal(htmlToMarkdown(''), '');
   assert.equal(htmlToMarkdown('   '), '');
 });
+
+test('htmlToMarkdown converts tables to GFM (pipe) tables', () => {
+  const html = `<table>
+    <thead><tr><th>Name</th><th>Age</th></tr></thead>
+    <tbody><tr><td>Ada</td><td>36</td></tr><tr><td>Alan</td><td>41</td></tr></tbody>
+  </table>`;
+  const md = htmlToMarkdown(html);
+  assert.match(md, /\| Name \| Age \|/);
+  assert.match(md, /\| --- \| --- \|/);
+  assert.match(md, /\| Ada \| 36 \|/);
+});
+
+test('htmlToMarkdown strips inline base64 data-URI images', () => {
+  const html =
+    '<p>Hi</p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA" alt="tiny">' +
+    '<img src="/real.png" alt="real">';
+  const md = htmlToMarkdown(html, { baseUrl: 'https://example.com' });
+  assert.doesNotMatch(md, /base64/);
+  assert.doesNotMatch(md, /data:image/);
+  assert.match(md, /https:\/\/example\.com\/real\.png/); // real image kept
+});
+
+test('onlyMainContent scopes to the dominant semantic container', () => {
+  const html = `<body>
+    <nav><a href="/x">nav junk</a></nav>
+    <article>
+      <h1>Real Article</h1>
+      <p>${'This is the substantial body of the article. '.repeat(10)}</p>
+    </article>
+    <footer>footer junk</footer>
+  </body>`;
+  const md = htmlToMarkdown(html, { onlyMainContent: true });
+  assert.match(md, /Real Article/);
+  assert.doesNotMatch(md, /nav junk/);
+  assert.doesNotMatch(md, /footer junk/);
+});
+
+test('tidy removes empty links and images', () => {
+  const html = '<p>Text <a href="">empty</a> <a href="/ok">ok</a></p>';
+  const md = htmlToMarkdown(html, { baseUrl: 'https://example.com' });
+  assert.doesNotMatch(md, /\]\(\s*\)/); // no empty-target links
+  assert.match(md, /\[ok\]\(https:\/\/example\.com\/ok\)/);
+});

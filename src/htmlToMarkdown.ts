@@ -1,11 +1,27 @@
 // HTML cleaning and Markdown conversion.
 //
 // Clean-room implementation using only permissively-licensed libraries
-// (cheerio: MIT, turndown: MIT). Deliberately does NOT copy code from the
-// AGPL-licensed Firecrawl project — only well-known, standard techniques.
+// (cheerio: MIT, turndown: MIT, turndown-plugin-gfm: MIT). Deliberately does
+// NOT copy code from the AGPL-licensed Firecrawl project — only well-known,
+// standard techniques.
 
 import { load } from 'cheerio';
 import TurndownService from 'turndown';
+import { gfm } from 'turndown-plugin-gfm';
+
+// Semantic containers that usually wrap the primary article/content.
+const MAIN_CONTENT_SELECTORS = [
+  'main',
+  'article',
+  '[role="main"]',
+  '#main',
+  '#content',
+  '.main-content',
+  '.post-content',
+  '.entry-content',
+  '.article-content',
+  '.article-body',
+];
 
 // Elements that never carry readable content — always removed.
 const STRIP_SELECTORS = [
@@ -74,6 +90,33 @@ export interface CleanOptions {
   baseUrl?: string;
 }
 
+// Find the semantic container that holds the bulk of the page's text. Returns
+// the element only when it clearly dominates the body (avoids scoping to a tiny
+// or empty <main>), otherwise undefined so the caller falls back to chrome
+// stripping.
+function pickMainContainer($: ReturnType<typeof load>): any | undefined {
+  const bodyLen = $('body').text().replace(/\s+/g, ' ').trim().length;
+  if (bodyLen === 0) return undefined;
+
+  let best: any | undefined;
+  let bestLen = 0;
+  for (const selector of MAIN_CONTENT_SELECTORS) {
+    $(selector).each((_, el) => {
+      const len = $(el).text().replace(/\s+/g, ' ').trim().length;
+      if (len > bestLen) {
+        bestLen = len;
+        best = el;
+      }
+    });
+  }
+
+  // Require the container to hold a meaningful share of the page text.
+  if (best && bestLen >= 200 && bestLen / bodyLen >= 0.4) {
+    return best;
+  }
+  return undefined;
+}
+
 // Load HTML into cheerio and strip noise, optionally reduce to main content,
 // and resolve relative links/images to absolute URLs.
 function clean(html: string, options: CleanOptions) {
@@ -81,7 +124,43 @@ function clean(html: string, options: CleanOptions) {
 
   $(STRIP_SELECTORS.join(',')).remove();
 
+  // Drop inline base64 / data-URI images — they bloat the output enormously
+  // and carry no value for an LLM reader.
+  $('img[src^="data:"]').remove();
+  $('img[srcset^="data:"]').removeAttr('srcset');
+
+  // Flatten layout tables (no <th> header row, or role="presentation"). The GFM
+  // plugin only converts true data tables and leaves the rest as raw HTML, so
+  // we collapse non-data tables to plain divs to keep that HTML out of the
+  // Markdown. Genuine data tables (with <th>) are left for GFM to convert.
+  $('table').each((_, el) => {
+    const $t = $(el);
+    const isPresentation = ($t.attr('role') || '').toLowerCase() === 'presentation';
+    const hasHeader = $t.find('tr').first().find('th').length > 0;
+    if (isPresentation || !hasHeader) {
+      const rows = $t
+        .find('tr')
+        .map((_, r) =>
+          `<div>${$(r)
+            .find('td,th')
+            .map((_, c) => $(c).html() ?? '')
+            .get()
+            .join(' ')}</div>`,
+        )
+        .get()
+        .join('');
+      $t.replaceWith(rows || '');
+    }
+  });
+
   if (options.onlyMainContent) {
+    // Prefer a clear semantic content container when one holds the bulk of the
+    // page text; otherwise fall back to stripping generic chrome from the body.
+    const main = pickMainContainer($);
+    if (main) {
+      const mainHtml = $.html(main);
+      $('body').empty().append(mainHtml);
+    }
     $(NON_MAIN_SELECTORS.join(',')).remove();
   }
 
@@ -119,9 +198,23 @@ function makeTurndown(): TurndownService {
     codeBlockStyle: 'fenced',
     emDelimiter: '_',
   });
+  // GFM support: tables, strikethrough, task lists.
+  td.use(gfm);
   // Drop anything that survived but carries no readable value.
   td.remove(['script', 'style', 'noscript', 'iframe', 'form']);
   return td;
+}
+
+// Tidy up common turndown artifacts: empty links/images, stray escapes, and
+// runs of blank lines.
+function tidyMarkdown(md: string): string {
+  return md
+    .replace(/!\[[^\]]*\]\(\s*\)/g, '') // images with empty src
+    .replace(/\[\s*\]\([^)]*\)/g, '') // links with empty text
+    .replace(/\[([^\]]+)\]\(\s*\)/g, '$1') // links with empty href -> text
+    .replace(/[ \t]+$/gm, '') // trailing whitespace
+    .replace(/\n{3,}/g, '\n\n') // collapse blank lines
+    .trim();
 }
 
 // Convert HTML to Markdown. Returns trimmed Markdown text.
@@ -131,8 +224,7 @@ export function htmlToMarkdown(html: string, options: CleanOptions = {}): string
   if (!body.trim()) return '';
 
   const markdown = makeTurndown().turndown(body);
-  // Collapse excessive blank lines that turndown can leave behind.
-  return markdown.replace(/\n{3,}/g, '\n\n').trim();
+  return tidyMarkdown(markdown);
 }
 
 // Extract readable plain text (used for the `content` field).
