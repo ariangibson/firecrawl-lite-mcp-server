@@ -12,6 +12,10 @@ env:
   GHCR_REGISTRY: ghcr.io
   DOCKER_IMAGE_NAME: ariangibson/firecrawl-lite-mcp-server
   GHCR_IMAGE_NAME: ${{ github.repository }}
+  # Run JS actions on the Node.js 24 runtime to clear the Node 20 deprecation
+  # warnings (the action major versions still bundle Node 20 until upstream
+  # ships Node 24 builds). See GitHub changelog 2025-09-19.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
