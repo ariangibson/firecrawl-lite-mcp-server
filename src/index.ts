@@ -75,6 +75,10 @@ const DEFAULT_SCRAPE_DELAY_MIN = 1000;
 const DEFAULT_SCRAPE_DELAY_MAX = 3000;
 const DEFAULT_BATCH_DELAY_MIN = 2000;
 const DEFAULT_BATCH_DELAY_MAX = 5000;
+// Max time to wait for the DOM to stop changing after load. Early-exits when
+// stable, so this only caps pages that keep mutating. Bump it (e.g. 12000) for
+// sites that inject content via long setTimeouts.
+const DEFAULT_SETTLE_MAX_MS = 3000;
 const DEFAULT_RETRY_ATTEMPTS = 3;
 const DEFAULT_RETRY_INITIAL_DELAY = 1000;
 const DEFAULT_RETRY_MAX_DELAY = 10000;
@@ -627,11 +631,10 @@ async function scrapeWebpageWithProxy(url: string, onlyMainContent: boolean = tr
     await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 1000) + 500));
     await page.evaluate(() => window.scrollTo(0, 0));
 
-    // Wait for the DOM to stabilize. This adapts to delayed-JS pages (content
-    // injected via setTimeout/XHR after load) without slowing fast pages: a
-    // stable page exits in ~1-2s, while late content resets the timer until it
-    // settles or we hit the cap.
-    await waitForContentToSettle(page, 8000);
+    // Wait for the DOM to stabilize. Adapts to AJAX/lazy content (a stable page
+    // exits in ~1-2s) while capping the wait for never-settling SPAs. Tunable
+    // via SCRAPE_SETTLE_MAX_MS for sites with long setTimeout-injected content.
+    await waitForContentToSettle(page, CONFIG.scraping.settleMaxMs);
 
     // Extract title
     const title = await page.title();
@@ -963,6 +966,7 @@ const CONFIG = {
     delayMax: Number(process.env.SCRAPE_DELAY_MAX) || DEFAULT_SCRAPE_DELAY_MAX,
     batchDelayMin: Number(process.env.SCRAPE_BATCH_DELAY_MIN) || DEFAULT_BATCH_DELAY_MIN,
     batchDelayMax: Number(process.env.SCRAPE_BATCH_DELAY_MAX) || DEFAULT_BATCH_DELAY_MAX,
+    settleMaxMs: Number(process.env.SCRAPE_SETTLE_MAX_MS) || DEFAULT_SETTLE_MAX_MS,
   },
   retry: {
     maxAttempts: Number(process.env.FIRECRAWL_RETRY_MAX_ATTEMPTS) || DEFAULT_RETRY_ATTEMPTS,
