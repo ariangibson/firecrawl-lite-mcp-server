@@ -31,6 +31,7 @@ import {
   buildLlmRequestBody,
   parseLlmJson,
 } from './utils.js';
+import { htmlToMarkdown, htmlToText } from './htmlToMarkdown.js';
 
 dotenv.config();
 
@@ -611,48 +612,12 @@ async function scrapeWebpageWithProxy(url: string, onlyMainContent: boolean = tr
     
     // Extract title
     const title = await page.title();
-    
-    // Extract content based on preference
-    let content = '';
-    let markdown = '';
-    
-    if (onlyMainContent) {
-      // Try to extract main content using common selectors
-      const mainContent = await page.evaluate(() => {
-        const selectors = [
-          'main',
-          '[role="main"]',
-          '.content',
-          '.post-content',
-          '.entry-content',
-          'article',
-          '.article-content',
-          '#content',
-          '.main-content'
-        ];
-        
-        for (const selector of selectors) {
-          const element = document.querySelector(selector);
-          if (element && element.textContent && element.textContent.trim().length > 100) {
-            return element.textContent.trim();
-          }
-        }
-        
-        // Fallback to body content
-        return document.body.textContent || '';
-      });
-      content = mainContent;
-      markdown = content;
-    } else {
-      // Extract full page content
-      content = await page.evaluate(() => document.body.textContent || '');
-      markdown = content;
-    }
-    
-    // Get HTML
+
+    // Get the fully rendered HTML, then derive clean Markdown and text from it.
     const html = await page.content();
-    
-    
+    const markdown = htmlToMarkdown(html, { onlyMainContent, baseUrl: url });
+    const content = htmlToText(html, { onlyMainContent, baseUrl: url });
+
     return {
       url,
       title,
@@ -736,7 +701,7 @@ Webpage URL: ${sanitizedUrl}
 Webpage Title: ${scraped.title}
 
 Content:
-${scraped.content}
+${scraped.markdown || scraped.content}
 
 ${schema ? `Extract data according to this JSON schema: ${JSON.stringify(schema, null, 2)}` : ''}
 
