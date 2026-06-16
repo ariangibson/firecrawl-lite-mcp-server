@@ -19,6 +19,18 @@ import { randomUUID } from 'node:crypto';
 import dotenv from 'dotenv';
 import axios from 'axios';
 
+// Shared pure helpers (also covered by unit tests in tests/)
+import {
+  DEFAULT_USER_AGENT,
+  isValidUrl,
+  sanitizeUrl,
+  validatePrompt,
+  parseProxyUrls,
+  parseUserAgents,
+  parseLlmConfig,
+  buildLlmRequestBody,
+} from './utils.js';
+
 dotenv.config();
 
 // Puppeteer will be loaded dynamically to handle mixed module issues
@@ -55,7 +67,6 @@ async function initializePuppeteer() {
 }
 
 // Constants
-const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const DEFAULT_VIEWPORT_WIDTH = 1920;
 const DEFAULT_VIEWPORT_HEIGHT = 1080;
 const DEFAULT_SCRAPE_DELAY_MIN = 1000;
@@ -69,27 +80,6 @@ const DEFAULT_RETRY_BACKOFF_FACTOR = 2;
 
 // Security constants
 const MAX_URLS_PER_REQUEST = 10;
-
-// Input validation utilities
-function isValidUrl(url: string): boolean {
-  try {
-    const parsedUrl = new URL(url);
-    // Only allow http and https protocols
-    return ['http:', 'https:'].includes(parsedUrl.protocol);
-  } catch {
-    return false;
-  }
-}
-
-function sanitizeUrl(url: string): string {
-  // Remove any potentially dangerous characters
-  return url.trim().replace(/[<>'"]/g, '');
-}
-
-function validatePrompt(prompt: string): boolean {
-  // Basic prompt validation - prevent extremely long prompts
-  return prompt.length > 0 && prompt.length < 10000;
-}
 
 // Types
 interface ScrapedContent {
@@ -787,18 +777,21 @@ Please provide the extracted data in JSON format. ${schema ? 'Ensure the respons
       console.error(`Using proxy for LLM API: [REDACTED]`);
     }
     
-    // Call LLM API with timeout for security
-    const response = await axios.post(`${LLM_PROVIDER_BASE_URL}/chat/completions`, {
-      model: LLM_MODEL,
-      messages: [
+    // Call LLM API with timeout for security.
+    // Optional tuning params (temperature, max_tokens, top_p, reasoning_effort)
+    // are sourced from CONFIG.llm so they can be set via env vars.
+    const requestBody = buildLlmRequestBody(
+      LLM_MODEL,
+      [
         {
           role: 'user',
           content: extractionPrompt
         }
       ],
-      temperature: 0.1,
-      max_tokens: 2000
-    }, {
+      CONFIG.llm
+    );
+
+    const response = await axios.post(`${LLM_PROVIDER_BASE_URL}/chat/completions`, requestBody, {
       ...axiosConfig,
       timeout: 60000, // 60 second timeout for security
       maxContentLength: 10 * 1024 * 1024, // 10MB max response size
@@ -907,29 +900,6 @@ const server = new Server(
 let currentProxyIndex = 0;
 let availableProxies: string[] = [];
 
-// Parse proxy URL with range support
-function parseProxyUrls(proxyUrl: string): string[] {
-  if (!proxyUrl) return [];
-  
-  // Check for port range syntax: https://example.com:10001-10010
-  const rangeMatch = proxyUrl.match(/^(https?:\/\/[^:]+):(\d+)-(\d+)$/);
-  if (rangeMatch) {
-    const [, baseUrl, startPort, endPort] = rangeMatch;
-    const start = parseInt(startPort, 10);
-    const end = parseInt(endPort, 10);
-    const proxies: string[] = [];
-    
-    for (let port = start; port <= end; port++) {
-      proxies.push(`${baseUrl}:${port}`);
-    }
-    
-    return proxies;
-  }
-  
-  // Single proxy URL
-  return [proxyUrl];
-}
-
 // Get next proxy URL with rotation
 function getNextProxy(): string | undefined {
   if (availableProxies.length === 0) return undefined;
@@ -947,24 +917,6 @@ availableProxies = parseProxyUrls(process.env.PROXY_SERVER_URL || '');
 let currentUserAgentIndex = 0;
 let availableUserAgents: string[] = [];
 
-// Parse user agent array with JSON support
-function parseUserAgents(userAgentEnv: string): string[] {
-  if (!userAgentEnv) return [DEFAULT_USER_AGENT];
-  
-  // Try to parse as JSON array first
-  try {
-    const parsed = JSON.parse(userAgentEnv);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed.filter(ua => typeof ua === 'string' && ua.trim().length > 0);
-    }
-  } catch {
-    // Not JSON, treat as single user agent
-  }
-  
-  // Single user agent string
-  return [userAgentEnv.trim()];
-}
-
 // Get next user agent with rotation
 function getNextUserAgent(): string {
   if (availableUserAgents.length === 0) return DEFAULT_USER_AGENT;
@@ -976,7 +928,7 @@ function getNextUserAgent(): string {
 }
 
 // Initialize user agent list
-availableUserAgents = parseUserAgents(process.env.SCRAPE_USER_AGENT || '');
+availableUserAgents = parseUserAgents(process.env.SCRAPE_USER_AGENT || '', DEFAULT_USER_AGENT);
 
 // Configuration for retries and monitoring
 const CONFIG = {
@@ -995,11 +947,7 @@ const CONFIG = {
     maxDelay: Number(process.env.FIRECRAWL_RETRY_MAX_DELAY) || DEFAULT_RETRY_MAX_DELAY,
     backoffFactor: Number(process.env.FIRECRAWL_RETRY_BACKOFF_FACTOR) || DEFAULT_RETRY_BACKOFF_FACTOR,
   },
-  llm: {
-    apiKey: process.env.LLM_API_KEY,
-    providerBaseUrl: process.env.LLM_PROVIDER_BASE_URL,
-    model: process.env.LLM_MODEL,
-  },
+  llm: parseLlmConfig(process.env),
   proxy: {
     url: process.env.PROXY_SERVER_URL,
     username: process.env.PROXY_SERVER_USERNAME,

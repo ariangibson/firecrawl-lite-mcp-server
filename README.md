@@ -101,6 +101,15 @@ LLM_PROVIDER_BASE_URL=https://api.x.ai/v1
 LLM_MODEL=grok-code-fast-1
 ```
 
+### **Optional LLM Tuning**
+These are passed straight through to the provider's `chat/completions` request. Leave any of them unset to use the default (or omit the parameter entirely):
+```bash
+LLM_REASONING_EFFORT=high   # Reasoning effort for reasoning models (omitted if unset)
+LLM_MAX_TOKENS=2000         # Max tokens in the response (default: 2000)
+LLM_TEMPERATURE=0.1         # Sampling temperature (default: 0.1)
+LLM_TOP_P=0.95              # Nucleus sampling top_p (omitted if unset)
+```
+
 ### **LLM Provider Examples**
 ```bash
 # xAI (Grok)
@@ -211,6 +220,22 @@ rm -rf ~/.cache/puppeteer && npx puppeteer browsers install chrome
 - Check LLM provider URL accessibility
 - Ensure API keys are valid
 - For corporate networks, configure proxy settings
+
+### **Container keeps restarting / killed with `SIGTERM` (Docker Swarm)**
+If the logs show the server start up (`listening on port 3000`) and then exit with
+`npm error signal SIGTERM`, the container is being killed by a failing healthcheck —
+not by the app itself. The published image is `node:20-alpine`, which does **not**
+include `curl`, so a `curl`-based healthcheck always fails and Swarm restarts the
+task in a loop. Use a `wget`-based check instead (busybox ships `wget`):
+```yaml
+healthcheck:
+  test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+```
+The bundled `docker-compose.yml` already uses this form.
 
 ## 📊 **Usage Examples**
 

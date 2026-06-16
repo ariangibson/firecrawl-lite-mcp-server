@@ -21,7 +21,13 @@ services:
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_PROVIDER_BASE_URL=${LLM_PROVIDER_BASE_URL}
       - LLM_MODEL=${LLM_MODEL}
-      
+
+      # Optional LLM tuning (omitted params fall back to defaults)
+      - LLM_REASONING_EFFORT=${LLM_REASONING_EFFORT}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE}
+      - LLM_TOP_P=${LLM_TOP_P}
+
       # Optional proxy configuration
       - PROXY_SERVER_URL=${PROXY_SERVER_URL}
       - PROXY_SERVER_USERNAME=${PROXY_SERVER_USERNAME}
@@ -42,7 +48,12 @@ services:
       - FIRECRAWL_RETRY_MAX_DELAY=${FIRECRAWL_RETRY_MAX_DELAY}
       - FIRECRAWL_RETRY_BACKOFF_FACTOR=${FIRECRAWL_RETRY_BACKOFF_FACTOR}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      # NOTE: the image is node:20-alpine and does NOT ship curl. Use wget
+      # (provided by busybox) so the check actually succeeds — a failing
+      # healthcheck gets the task SIGTERM'd/restarted under Docker Swarm.
+      test:
+        ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
